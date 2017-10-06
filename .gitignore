@@ -6,6 +6,9 @@ __pycache__/
 # C extensions
 *.so
 
+# docker volumes
+volumes/
+
 # Distribution / packaging
 .Python
 env/
