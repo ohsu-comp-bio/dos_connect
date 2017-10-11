@@ -12,4 +12,4 @@ for message in consumer:
     # e.g., for unicode: `message.value.decode('utf-8')`
     print ("%s:%d:%d: payload=%s"      % (message.topic, message.partition,
                                           message.offset, 
-                                          json.loads(message.value)['payload']))
+                                          json.loads(message.value)))

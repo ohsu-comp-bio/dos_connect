@@ -23,15 +23,15 @@ echo "builder does exists OK"
 
 # the build step already built the connector we want to use
 # so copy that target to our volume
-docker run --rm -v $(pwd)/volumes/jars:/jars -it kafka-connector-builder cp target/connect-directory-source-1.0-jar-with-dependencies.jar /jars
+# docker run --rm -v $(pwd)/volumes/jars:/jars -it kafka-connector-builder cp build/libs/connect-directory-source-1.0-all.jar  /jars
 
 # check all ok
 
 echo "## checking for successful build of our connector DirectorySourceConnector..."
-if [ -e "volumes/jars/connect-directory-source-1.0-jar-with-dependencies.jar" ]; then
-  echo "connect-directory-source-1.0-jar-with-dependencies.jar OK"
+if [ -e "volumes/jars/connect-directory-source-1.0-all.jar" ]; then
+  echo "connect-directory-source-1.0-all.jar OK"
 else
-  echo "connect-directory-source-1.0-jar-with-dependencies.jar FAIL"
+  echo "connect-directory-source-1.0-all.jar FAIL"
   exit 1
 fi
 
