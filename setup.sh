@@ -15,17 +15,28 @@ mkdir -p volumes/elastic/backups
 echo "## checking for connector build image..."
 [ ! -z $(docker images -q kafka-connector-builder:latest) ] || docker build -t kafka-connector-builder -f kafka-connector-builder.dockerfile .
 if [ -z $(docker images -q kafka-connector-builder:latest) ]; then
-  echo $?
   echo "builder does not exist FAIL"; exit 1
 fi
+echo "builder exists OK"
 
-echo "builder does exists OK"
+docker inspect  --format="{{.State.Running}}" builder > /dev/null
+if [ $? -ne 0 ]; then
+  echo "## Starting builder..."
+  docker run --name builder -v $(pwd)/volumes/jars:/jars -d -t kafka-connector-builder bash
+fi
+docker inspect  --format="{{.State.Running}}" builder > /dev/null
+if [ $? -ne 0 ]; then
+  echo "builder not running FAIL"; exit 1
+fi
+echo "builder running OK"
 
-# the build step already built the connector we want to use
-# so copy that target to our volume
-# docker run --rm -v $(pwd)/volumes/jars:/jars -it kafka-connector-builder cp build/libs/connect-directory-source-1.0-all.jar  /jars
-
-# check all ok
+# echo "## building connectors ..."
+# rm -f volumes/jars/connect-directory-source-1.0-all.jar
+# # the build step already built the connector we want to use
+# # so copy that target to our volume
+# docker exec builder bash -c "git pull origin s3; gradle shadowJar; cp build/libs/connect-directory-source-1.0-all.jar  /jars"
+# 
+# # check all ok
 
 echo "## checking for successful build of our connector DirectorySourceConnector..."
 if [ -e "volumes/jars/connect-directory-source-1.0-all.jar" ]; then
@@ -112,7 +123,7 @@ else
   echo "### will read directory entries of from topic 'directory_topic' and write to elastic index 'directory_topic' ..."
   curl --silent -X POST -H "Content-Type: application/json" --data '{"name":"elasticsearch-sink","config":{"connector.class":"io.confluent.connect.elasticsearch.ElasticsearchSinkConnector","type.name":"directory","tasks.max":"1","topics":"directory_topic","key.ignore":"true","schema.ignore":"true","connection.url":"http://localhost:9200"}}'  http://localhost:28082/connectors > /dev/null
   printf '.'
-  sleep 5
+  sleep 10
   curl --fail --silent  localhost:28082/connectors/elasticsearch-sink/status  > /dev/null
   if [ $? -eq 0 ]; then
     echo "elasticsearch-sink found OK"

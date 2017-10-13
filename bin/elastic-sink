@@ -1,0 +1,52 @@
+#!/bin/bash
+echo "## checking elasticsearch-sink worker in kafka worker config..."
+curl --silent --fail  localhost:28082/connectors/elasticsearch-sink/status  > /dev/null
+if [ $? -eq 0 ]; then
+  echo "elasticsearch-sink found OK"
+else
+  echo "### elasticsearch-sink not found creating it..."
+  echo "### will read directory entries of from topic 'directory-topic,s3-topic,file-topic' and write to elastic indices ..."
+  curl --silent -X POST -H "Content-Type: application/json" --data \
+  '{
+  "name":"elasticsearch-sink",
+  "config":{
+    "connector.class":"io.confluent.connect.elasticsearch.ElasticsearchSinkConnector",
+    "type.name":"directory",
+    "tasks.max":"1",
+    "topics":"directory-topic,s3-topic,file-topic",
+    "key.ignore":true,
+    "schema.ignore":true,
+    "connection.url":"http://localhost:9200",
+ "key.converter": "org.apache.kafka.connect.storage.StringConverter",
+ "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+ "internal.key.converter": "org.apache.kafka.connect.json.JsonConverter",
+ "internal.value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter.schemas.enable":false,
+    "internal.key.converter.schemas.enable": false,
+    "internal.value.converter.schemas.enable": false,
+    "schemas.enable": false
+  }
+  }' \
+  http://localhost:28082/connectors > /dev/null
+  printf '.'
+  sleep 10
+  curl --fail --silent  localhost:28082/connectors/elasticsearch-sink/status  > /dev/null
+  if [ $? -eq 0 ]; then
+    echo "elasticsearch-sink found OK"
+  else
+    echo "elasticsearch-sink could not be created FAIL"
+    exit 1
+  fi
+fi
+
+echo "## wait for elastic index to create ..."
+until $(curl --output /dev/null --silent  --fail localhost:9200/directory-topic); do
+    printf '.'
+    sleep 5
+done
+echo "elastic index created OK"
+
+echo '## list directory elements from elasticsearch...'
+curl --silent  localhost:9200/directory-topic/_search | jq .
+curl --silent  localhost:9200/s3-topic/_search | jq .
+curl --silent  localhost:9200/file-topic/_search | jq .
