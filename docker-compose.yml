@@ -38,10 +38,10 @@ services:
       - zookeeper
       - kafka
     environment:
-      KAFKA_REST_ZOOKEEPER_CONNECT: localhost:32181 
-      KAFKA_REST_LISTENERS: http://localhost:8082 
-#      KAFKA_REST_SCHEMA_REGISTRY_URL: http://localhost:8081 
-      KAFKA_REST_HOST_NAME: localhost 
+      KAFKA_REST_ZOOKEEPER_CONNECT: localhost:32181
+      KAFKA_REST_LISTENERS: http://localhost:8082
+#      KAFKA_REST_SCHEMA_REGISTRY_URL: http://localhost:8081
+      KAFKA_REST_HOST_NAME: localhost
       KAFKA_REST_BOOTSTRAP_SERVERS: localhost:29092
 
   kafka-connect:
@@ -54,24 +54,24 @@ services:
       # Specify an absolute path mapping
       - "./volumes/jars:/etc/kafka-connect/jars"
     environment:
-      CONNECT_PRODUCER_INTERCEPTOR_CLASSES: io.confluent.monitoring.clients.interceptor.MonitoringProducerInterceptor   
-      CONNECT_CONSUMER_INTERCEPTOR_CLASSES: io.confluent.monitoring.clients.interceptor.MonitoringConsumerInterceptor   
-      CONNECT_BOOTSTRAP_SERVERS: localhost:29092   
-      CONNECT_REST_PORT: 28082   
-      CONNECT_GROUP_ID: "quickstart"   
-      CONNECT_CONFIG_STORAGE_TOPIC: "quickstart-config"   
-      CONNECT_OFFSET_STORAGE_TOPIC: "quickstart-offsets"   
-      CONNECT_STATUS_STORAGE_TOPIC: "quickstart-status"   
-      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 1   
-      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 1   
-      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 1   
-      CONNECT_KEY_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"   
-      CONNECT_VALUE_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"   
-      CONNECT_INTERNAL_KEY_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"   
-      CONNECT_INTERNAL_VALUE_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"   
-      CONNECT_REST_ADVERTISED_HOST_NAME: "localhost"   
+      CONNECT_PRODUCER_INTERCEPTOR_CLASSES: io.confluent.monitoring.clients.interceptor.MonitoringProducerInterceptor
+      CONNECT_CONSUMER_INTERCEPTOR_CLASSES: io.confluent.monitoring.clients.interceptor.MonitoringConsumerInterceptor
+      CONNECT_BOOTSTRAP_SERVERS: localhost:29092
+      CONNECT_REST_PORT: 28082
+      CONNECT_GROUP_ID: "quickstart"
+      CONNECT_CONFIG_STORAGE_TOPIC: "quickstart-config"
+      CONNECT_OFFSET_STORAGE_TOPIC: "quickstart-offsets"
+      CONNECT_STATUS_STORAGE_TOPIC: "quickstart-status"
+      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_KEY_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
+      CONNECT_VALUE_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
+      CONNECT_INTERNAL_KEY_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
+      CONNECT_INTERNAL_VALUE_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
+      CONNECT_REST_ADVERTISED_HOST_NAME: "localhost"
       CONNECT_LOG4J_ROOT_LOGLEVEL: INFO
-      CONNECT_LOG4J_LOGGERS: "org.reflections: ERROR"   
+      CONNECT_LOG4J_LOGGERS: "org.reflections: ERROR"
       AWS_ACCESS_KEY_ID: 724596f1fe184f02b8c682fa2734a4e6
       AWS_SECRET_ACCESS_KEY: ae40a4e76d1d4aeea74b85142b18a8fb
 
@@ -96,3 +96,14 @@ services:
       - xpack.security.enabled=false
       - path.repo=/backups
 
+  swift:
+    build:
+      context: services/swift
+    ports:
+      - "8080:8080"
+    network_mode: host
+    environment:
+      - http.host=0.0.0.0
+      - transport.host=127.0.0.1
+      - xpack.security.enabled=false
+      - path.repo=/backups

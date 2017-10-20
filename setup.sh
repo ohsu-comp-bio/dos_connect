@@ -23,7 +23,7 @@ echo "builder does exists OK"
 
 # the build step already built the connector we want to use
 # so copy that target to our volume
-# docker run --rm -v $(pwd)/volumes/jars:/jars -it kafka-connector-builder cp build/libs/connect-directory-source-1.0-all.jar  /jars
+docker run --rm -v $(pwd)/volumes/jars:/jars -it kafka-connector-builder cp build/libs/connect-directory-source-1.0-all.jar  /jars
 
 # check all ok
 
@@ -36,9 +36,10 @@ else
 fi
 
 echo "## create docker compose images..."
-docker-compose create 
+DC='docker-compose -f docker-compose.yml -f docker-compose.mac.yml'
+$DC create
 echo "## start docker compose images..."
-docker-compose start
+$DC start
 
 echo "## wait for kafka connect to start up..."
 until $(curl --output /dev/null --silent  --fail localhost:28082/connectors); do
@@ -89,7 +90,7 @@ else
   curl --fail --silent  localhost:28082/connectors/directory-source/status  > /dev/null
   if [ $? -eq 0 ]; then
     echo "directory-source found OK"
-  else 
+  else
     echo "directory-source could not be created FAIL"
     exit 1
   fi
