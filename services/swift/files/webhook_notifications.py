@@ -208,9 +208,9 @@ class LoggingNotifier(object):
         self.logger.info('webhook_filter::WebHookMiddleware::LoggingNotifier')
         self.logger.info(event_type)
         self.logger.info(payload)        
-        api_url = conf.get('api_url')
+        api_url = self.conf.get('api_url')
         if api_url:
-            r = requests.post(conf.get('api_url'),  json=payload)
+            r = requests.post(self.conf.get('api_url'),  json=payload)
             self.logger.debug("euler.api_response: {} {}".format(r, r.text))
 
 
