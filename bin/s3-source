@@ -32,7 +32,7 @@ if [ $? -eq 0 ]; then
   echo "s3-source found OK"
 else
   echo "### s3-source not found creating it..."
-  echo "### will publish directory entries of /tmp on topic 's3-topic'..."
+  echo "### will publish directory entries of s3 container on topic 's3-topic'..."
 curl -s -X POST \
 -H "Content-Type: application/json" \
 --data '{ "name": "s3-source", 
@@ -51,11 +51,17 @@ curl -s -X POST \
  "value.converter": "org.apache.kafka.connect.storage.StringConverter",
  "internal.key.converter": "org.apache.kafka.connect.json.JsonConverter",
  "internal.value.converter": "org.apache.kafka.connect.json.JsonConverter",
+ "value.converter.schemas.enable":false,
  "internal.key.converter.schemas.enable": false,
- "internal.value.converter.schemas.enable": false
+ "internal.value.converter.schemas.enable": false,
+ "schemas.enable": false
    } }' \
 http://localhost:28082/connectors > /dev/null
-  sleep 5
+  sleep 10
+ # "internal.key.converter": "org.apache.kafka.connect.json.JsonConverter",
+ # "internal.value.converter": "org.apache.kafka.connect.json.JsonConverter",
+ # "key.converter": "org.apache.kafka.connect.storage.StringConverter",
+ # "value.converter": "org.apache.kafka.connect.storage.StringConverter",
   curl --fail --silent  localhost:28082/connectors/s3-source/status  > /dev/null
   if [ $? -eq 0 ]; then
     echo "s3-source found OK"

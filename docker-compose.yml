@@ -53,6 +53,7 @@ services:
     volumes:
       # Specify an absolute path mapping
       - "./volumes/jars:/etc/kafka-connect/jars"
+      - "./volumes/files:/files"
     environment:
       CONNECT_PRODUCER_INTERCEPTOR_CLASSES: io.confluent.monitoring.clients.interceptor.MonitoringProducerInterceptor
       CONNECT_CONSUMER_INTERCEPTOR_CLASSES: io.confluent.monitoring.clients.interceptor.MonitoringConsumerInterceptor
@@ -107,3 +108,12 @@ services:
       - transport.host=127.0.0.1
       - xpack.security.enabled=false
       - path.repo=/backups
+
+  ui:
+    image: landoop/kafka-topics-ui
+    ports:
+      - "8000:8000"
+    network_mode: host
+    environment:
+      - KAFKA_REST_PROXY_URL=http://localhost:8082
+      - PROXY=true

@@ -1,0 +1,47 @@
+#!/bin/bash
+echo "## checking DirectorySourceConnector worker..."
+curl --silent  localhost:28082/connector-plugins | grep DirectorySourceConnector > /dev/null
+if [ $? -eq 0 ]; then
+  echo "DirectorySourceConnector found OK"
+else
+  echo "DirectorySourceConnector not found FAIL"
+  exit 1
+fi
+
+
+echo "## checking DirectorySourceConnector topic..."
+# create it if not exists
+docker run \
+  --net=host \
+  --rm \
+  confluentinc/cp-kafka:3.3.0 \
+  kafka-topics --create --topic directory-topic --partitions 1 --replication-factor 1 --if-not-exists --zookeeper localhost:32181 > /dev/null
+
+docker run    --net=host    --rm    confluentinc/cp-kafka:3.3.0    kafka-topics --describe --zookeeper localhost:32181 | grep directory-topic > /dev/null
+if [ $? -eq 0 ]; then
+  echo "DirectorySourceConnector topic found OK"
+else
+  echo "DirectorySourceConnector topic  not found, FAIL"
+  exit 1
+fi
+
+echo "## checking directory-source worker in kafka worker config..."
+curl --silent --fail  localhost:28082/connectors/directory-source/status  > /dev/null
+if [ $? -eq 0 ]; then
+  echo "directory-source found OK"
+else
+  echo "### directory-source not found creating it..."
+  echo "### will publish directory entries of /files on topic 'directory-topic'..."
+  curl -s -X POST \
+  -H "Content-Type: application/json" \
+  --data '{ "name": "directory-source", "config": {"tasks.max": 1, "connector.class": "org.apache.kafka.connect.directory.DirectorySourceConnector", "topic": "directory-topic", "schema.name": "directory",  "check.dir.ms": 1000, "directories.paths": "/files"} }' \
+  http://localhost:28082/connectors > /dev/null
+  sleep 10
+  curl --fail --silent  localhost:28082/connectors/directory-source/status  > /dev/null
+  if [ $? -eq 0 ]; then
+    echo "directory-source found OK"
+  else 
+    echo "directory-source could not be created FAIL"
+    exit 1
+  fi
+fi

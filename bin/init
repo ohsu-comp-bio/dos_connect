@@ -1,0 +1,33 @@
+#!/bin/bash
+# start VMs
+# you should have docker & docker compose already setup
+docker-compose --version >> /dev/null
+if [ $? -ne 0 ]; then
+  echo "you should have docker & docker compose already setup FAIL"; exit 1
+fi
+
+
+# initialize our host volumes
+mkdir -p volumes/jars
+mkdir -p volumes/files
+mkdir -p volumes/elastic/backups
+
+echo "## checking for successful build of our connectors ..."
+if [ -e "volumes/jars/connect-directory-source-1.0-all.jar" ]; then
+  echo "connect-directory-source-1.0-all.jar OK"
+else
+  ( bin/build-connectors )
+fi
+
+echo "## create docker compose images..."
+docker-compose create 
+echo "## start docker compose images..."
+docker-compose start
+
+echo "## wait for kafka connect to start up..."
+until $(curl --output /dev/null --silent  --fail localhost:28082/connectors); do
+    printf '.'
+    sleep 5
+done
+echo "kafka connect up OK"
+
