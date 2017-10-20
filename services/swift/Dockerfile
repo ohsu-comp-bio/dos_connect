@@ -17,20 +17,12 @@ ARG PACKAGES='\
     swift-plugin-s3 \
     swift-container \
     curl \
-    wget \
-    build-essential autoconf libtool pkg-config python-opengl python-imaging python-pyrex python-pyside.qtopengl idle-python2.7 qt4-dev-tools qt4-designer libqtgui4 libqtcore4 libqt4-xml libqt4-test libqt4-script libqt4-network libqt4-dbus python-qt4 python-qt4-gl libgle3 python-dev'
+    wget'
 
 RUN apt-get update -qq && \
     apt-get install -y --no-install-recommends $PACKAGES
 
     
-RUN wget https://bootstrap.pypa.io/get-pip.py
-RUN python get-pip.py
-RUN pip install -U setuptools pip
-RUN pip install python-openstackclient
-
-
-
 RUN mkdir -p /var/log/supervisor
 COPY files/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
