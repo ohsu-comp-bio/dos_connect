@@ -108,6 +108,7 @@ services:
       - transport.host=127.0.0.1
       - xpack.security.enabled=false
       - path.repo=/backups
+      - OBSERVER_URL=http://localhost:5000
 
   ui:
     image: landoop/kafka-topics-ui
@@ -117,3 +118,15 @@ services:
     environment:
       - KAFKA_REST_PROXY_URL=http://localhost:8082
       - PROXY=true
+
+  observer:
+    build:
+      context: services/observer
+    ports:
+      - "5000:5000"
+    network_mode: host
+    environment:
+      - OBSERVER_PORT=5000
+      - KAFKA_TOPIC=swift-topic
+      - KAFKA_BOOTSTRAP=localhost:29092
+

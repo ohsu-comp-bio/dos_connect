@@ -1,18 +1,3 @@
-# Copyright (c) 2016 Hewlett-Packard Enterprise Development Company, L.P.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#    http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
-# implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 """
 This middleware emits webhook notifications following successful
 object creation, deletion, copy or metadata operations.  In its current
@@ -55,6 +40,7 @@ from swift.common import wsgi
 from swift.common.utils import get_logger
 
 import requests
+import json 
 
 
 class WebHookContext(wsgi.WSGIContext):
@@ -205,13 +191,19 @@ class LoggingNotifier(object):
         self.conf = conf
 
     def info(self, obj, event_type, payload):
-        self.logger.info('webhook_filter::WebHookMiddleware::LoggingNotifier')
-        self.logger.info(event_type)
-        self.logger.info(payload)        
-        api_url = self.conf.get('api_url')
-        if api_url:
-            r = requests.post(self.conf.get('api_url'),  json=payload)
-            self.logger.debug("euler.api_response: {} {}".format(r, r.text))
+        try:
+            self.logger.info('webhook_filter::WebHookMiddleware::LoggingNotifier')
+            self.logger.info('event_type:{}'.format(event_type))
+            self.logger.info(payload)
+            api_url = self.conf.get('api_url',None)
+            self.logger.info('api_url:{}'.format(api_url))
+            if api_url:
+                r = requests.post(api_url, data=json.dumps(payload), headers={"content-type": "application/json"} )
+                self.logger.info(r.status_code)
+                self.logger.info(r.headers['content-type'])
+                self.logger.info(r.content)
+        except Exception as e:
+            self.logger.error(e)
 
 
 class WebHookMiddleware(object):
@@ -236,3 +228,4 @@ def filter_factory(global_conf, **local_conf):
     def webhook_filter(app):
         return WebHookMiddleware(app, conf)
     return webhook_filter
+
