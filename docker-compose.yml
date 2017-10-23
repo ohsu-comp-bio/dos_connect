@@ -19,18 +19,6 @@ services:
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:29092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
 
-#  schema_registry:
-#    image: confluentinc/cp-schema-registry:3.3.0
-#    network_mode: host
-#    depends_on:
-#      - zookeeper
-#      - kafka
-#    environment:
-#      SCHEMA_REGISTRY_HOST_NAME: localhost
-#      SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: 'localhost:32181'
-#      SCHEMA_REGISTRY_LISTENERS: http://localhost:8081
-
-
   kafka-rest:
     image: confluentinc/cp-kafka-rest:3.3.0
     network_mode: host
@@ -40,7 +28,6 @@ services:
     environment:
       KAFKA_REST_ZOOKEEPER_CONNECT: localhost:32181
       KAFKA_REST_LISTENERS: http://localhost:8082
-#      KAFKA_REST_SCHEMA_REGISTRY_URL: http://localhost:8081
       KAFKA_REST_HOST_NAME: localhost
       KAFKA_REST_BOOTSTRAP_SERVERS: localhost:29092
 
@@ -103,12 +90,11 @@ services:
     ports:
       - "8080:8080"
     network_mode: host
+    # coordinate with services/swift/files/proxy-server.conf
     environment:
       - http.host=0.0.0.0
-      - transport.host=127.0.0.1
-      - xpack.security.enabled=false
-      - path.repo=/backups
-      - OBSERVER_URL=http://localhost:5000
+      - KAFKA_TOPIC=s3-topic
+      - KAFKA_BOOTSTRAP=localhost:29092
 
   ui:
     image: landoop/kafka-topics-ui
@@ -119,14 +105,16 @@ services:
       - KAFKA_REST_PROXY_URL=http://localhost:8082
       - PROXY=true
 
-  observer:
+  sqs-observer:
     build:
-      context: services/observer
-    ports:
-      - "5000:5000"
+      context: services/sqs-observer
     network_mode: host
     environment:
-      - OBSERVER_PORT=5000
-      - KAFKA_TOPIC=swift-topic
+      - KAFKA_TOPIC=s3-topic
       - KAFKA_BOOTSTRAP=localhost:29092
+      - SQS_QUEUE_NAME=dos-testing
+      - AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION
+      - AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+      - AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+
 
