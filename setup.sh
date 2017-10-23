@@ -47,7 +47,7 @@ else
 fi
 
 echo "## create docker compose images..."
-DC='docker-compose -f docker-compose.yml -f docker-compose.mac.yml'
+DC='docker-compose -f docker-compose.yml'
 $DC create
 echo "## start docker compose images..."
 $DC start
