@@ -1,3 +1,4 @@
 flask
 requests
 kafka-python
+boto3

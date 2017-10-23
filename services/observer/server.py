@@ -33,7 +33,8 @@ def swift():
 def save(payload):
     """ write dict to kafka """
     producer = KafkaProducer(bootstrap_servers=app.config['_kafka_bootstrap'])
-    producer.send(app.config['_kafka_topic'], json.dumps(payload))
+    key = '{}~{}~{}'.format(payload['event_type'], payload['container'], payload.get('etag', None))
+    producer.send(app.config['_kafka_topic'], key=key, value=json.dumps(payload))
     producer.flush()
     app.logger.info('sent to kafka topic: {}'.format(app.config['_kafka_topic']))
 

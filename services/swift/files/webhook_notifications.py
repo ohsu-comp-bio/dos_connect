@@ -192,6 +192,7 @@ class LoggingNotifier(object):
 
     def info(self, obj, event_type, payload):
         try:
+            payload['event_type'] = event_type
             self.logger.info('webhook_filter::WebHookMiddleware::LoggingNotifier')
             self.logger.info('event_type:{}'.format(event_type))
             self.logger.info(payload)
