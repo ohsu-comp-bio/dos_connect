@@ -40,7 +40,7 @@ from swift.common import wsgi
 from swift.common.utils import get_logger
 
 import requests
-import json 
+import json
 from kafka import KafkaProducer
 
 
@@ -111,11 +111,12 @@ class WebHookContext(wsgi.WSGIContext):
             return response
 
         event_methods = {
-            'DELETE': 'delete',
-            'COPY': 'copy',
-            'PUT': 'create',
+            'DELETE': 'ObjectRemoved:Delete',
+            'COPY': 'ObjectCreated:Copy',
+            'PUT': 'ObjectCreated:Put',
             'POST': 'metadata'
         }
+
         event_object = ('object' if obj
                         else 'container' if container
                         else 'account')
@@ -216,27 +217,29 @@ class LoggingNotifier(object):
             self.logger.info('webhook_filter::WebHookMiddleware::LoggingNotifier')
             self.logger.info('event_type:{}'.format(event_type))
             self.logger.info(payload)
-            api_url = self.conf.get('api_url',None)
+            api_url = self.conf.get('api_url', None)
             self.logger.info('api_url:{}'.format(api_url))
-            kafka_topic = self.conf.get('kafka_topic',None)
+            kafka_topic = self.conf.get('kafka_topic', None)
             self.logger.info('kafka_topic:{}'.format(kafka_topic))
-            kafka_bootstrap= self.conf.get('kafka_bootstrap',None)
+            kafka_bootstrap = self.conf.get('kafka_bootstrap', None)
             self.logger.info('kafka_bootstrap:{}'.format(kafka_bootstrap))
             if api_url:
-                r = requests.post(api_url, data=json.dumps(payload), headers={"content-type": "application/json"} )
+                r = requests.post(api_url,
+                                  data=json.dumps(payload),
+                                  headers={"content-type": "application/json"})
                 self.logger.info(r.status_code)
                 self.logger.info(r.headers['content-type'])
                 self.logger.info(r.content)
             if kafka_topic:
-    		""" write dict to kafka """
-    		producer = KafkaProducer(bootstrap_servers=kafka_bootstrap)
-		payload = self.to_data_object(payload)
+                """ write dict to kafka """
+                producer = KafkaProducer(bootstrap_servers=kafka_bootstrap)
+                payload = self.to_data_object(payload)
                 key = '{}~{}~{}'.format(payload['system_metadata_fields']['event_type'],
-                            		payload['system_metadata_fields']['container'],
-                            		payload.get('checksum', None))
-    		producer.send(kafka_topic, key=key, value=json.dumps(payload))
-    		producer.flush()
-    		logger.info('sent to kafka topic: {}'.format(kafka_topic))
+                                        payload['system_metadata_fields']['container'],
+                                        payload.get('checksum', None))
+                producer.send(kafka_topic, key=key, value=json.dumps(payload))
+                producer.flush()
+                logger.info('sent to kafka topic: {}'.format(kafka_topic))
 
         except Exception as e:
             self.logger.error(e)
@@ -264,4 +267,3 @@ def filter_factory(global_conf, **local_conf):
     def webhook_filter(app):
         return WebHookMiddleware(app, conf)
     return webhook_filter
-
