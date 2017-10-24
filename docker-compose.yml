@@ -118,3 +118,14 @@ services:
       - AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
 
 
+  file-observer:
+    build:
+      context: services/file-observer
+    network_mode: host
+    volumes:
+      - "./volumes/files:/files"
+    environment:
+      - KAFKA_TOPIC=s3-topic
+      - KAFKA_BOOTSTRAP=localhost:29092
+      - MONITOR_DIRECTORY=/files
+      - OBSERVER_PARMS=--inventory
