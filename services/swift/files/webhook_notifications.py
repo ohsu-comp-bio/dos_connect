@@ -40,7 +40,7 @@ from swift.common import wsgi
 from swift.common.utils import get_logger
 
 import requests
-import json 
+import json
 from kafka import KafkaProducer
 
 
@@ -111,21 +111,23 @@ class WebHookContext(wsgi.WSGIContext):
             return response
 
         event_methods = {
-            'DELETE': 'delete',
-            'COPY': 'copy',
-            'PUT': 'create',
+            'DELETE': 'ObjectRemoved:Delete',
+            'COPY': 'ObjectCreated:Copy',
+            'PUT': 'ObjectCreated:Put',
             'POST': 'metadata'
         }
+
         event_object = ('object' if obj
                         else 'container' if container
                         else 'account')
 
-        event_type = '%s.%s' % (event_object, event_methods[method])
+        event_type = '%s' % (event_methods[method])
 
         if status_code in (200, 201, 202, 204):
             request_headers = request.headers
 
             payload = self._get_request_auth_info(request_headers)
+            payload['object_type'] = event_object
             payload['account'] = account
             if container:
                 payload['container'] = container
@@ -193,7 +195,7 @@ class LoggingNotifier(object):
 
     def to_data_object(self, swift):
         """ covert to data object """
-        fields = ["account", "project_name", "container", "event_type",
+        fields = ["account", "project_name", "container", "event_type", "object_type",
                   "x-object-meta-mtime", "x-timestamp", "project_domain_name",
                   "x-trans-id", "project_id", "content-type", "project_domain_id"]
         system_metadata_fields = {}
@@ -205,6 +207,7 @@ class LoggingNotifier(object):
           "created": swift['updated_at'],
           "updated": swift['updated_at'],
           "checksum": swift['etag'],
+          "urls": ["swift://{}/{}".format(swift['container'],swift['object'])],
           "system_metadata_fields": system_metadata_fields
         }
         return data_object
@@ -216,27 +219,29 @@ class LoggingNotifier(object):
             self.logger.info('webhook_filter::WebHookMiddleware::LoggingNotifier')
             self.logger.info('event_type:{}'.format(event_type))
             self.logger.info(payload)
-            api_url = self.conf.get('api_url',None)
+            api_url = self.conf.get('api_url', None)
             self.logger.info('api_url:{}'.format(api_url))
-            kafka_topic = self.conf.get('kafka_topic',None)
+            kafka_topic = self.conf.get('kafka_topic', None)
             self.logger.info('kafka_topic:{}'.format(kafka_topic))
-            kafka_bootstrap= self.conf.get('kafka_bootstrap',None)
+            kafka_bootstrap = self.conf.get('kafka_bootstrap', None)
             self.logger.info('kafka_bootstrap:{}'.format(kafka_bootstrap))
             if api_url:
-                r = requests.post(api_url, data=json.dumps(payload), headers={"content-type": "application/json"} )
+                r = requests.post(api_url,
+                                  data=json.dumps(payload),
+                                  headers={"content-type": "application/json"})
                 self.logger.info(r.status_code)
                 self.logger.info(r.headers['content-type'])
                 self.logger.info(r.content)
             if kafka_topic:
-    		""" write dict to kafka """
-    		producer = KafkaProducer(bootstrap_servers=kafka_bootstrap)
-		payload = self.to_data_object(payload)
+                """ write dict to kafka """
+                producer = KafkaProducer(bootstrap_servers=kafka_bootstrap)
+                payload = self.to_data_object(payload)
                 key = '{}~{}~{}'.format(payload['system_metadata_fields']['event_type'],
-                            		payload['system_metadata_fields']['container'],
-                            		payload.get('checksum', None))
-    		producer.send(kafka_topic, key=key, value=json.dumps(payload))
-    		producer.flush()
-    		logger.info('sent to kafka topic: {}'.format(kafka_topic))
+                                        payload['system_metadata_fields']['container'],
+                                        payload.get('checksum', None))
+                producer.send(kafka_topic, key=key, value=json.dumps(payload))
+                producer.flush()
+                logger.info('sent to kafka topic: {}'.format(kafka_topic))
 
         except Exception as e:
             self.logger.error(e)
