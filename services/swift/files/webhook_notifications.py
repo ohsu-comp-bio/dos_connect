@@ -269,4 +269,3 @@ def filter_factory(global_conf, **local_conf):
     def webhook_filter(app):
         return WebHookMiddleware(app, conf)
     return webhook_filter
-
