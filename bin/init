@@ -28,6 +28,7 @@ echo "kafka up OK"
 # create whatever topics here.
 bin/topic-create $KAFKA_DOS_TOPIC
 
-
 echo "## start remainder of containers ...."
 docker-compose start
+
+

@@ -168,7 +168,7 @@ if __name__ == "__main__":
     logger.setLevel(logging.DEBUG)
     ch = logging.StreamHandler()
     logger.addHandler(ch)
-
+    logger.debug(args)
     path = args.monitor_directory
     event_handler = KafkaHandler(
         patterns=args.patterns,
@@ -182,6 +182,7 @@ if __name__ == "__main__":
     )
 
     if args.inventory:
+        logger.debug("inventory {}".format(path))
         for root, dirs, files in os.walk(path):
             if not args.ignore_directories:
                 for name in dirs:
@@ -192,6 +193,7 @@ if __name__ == "__main__":
                 event_handler.on_any_event(FileCreatedEvent(
                         os.path.join(root, name)))
     else:
+        logger.debug("observing {}".format(path))
         observer = Observer()
         observer.schedule(event_handler, path, recursive=True)
         observer.start()
