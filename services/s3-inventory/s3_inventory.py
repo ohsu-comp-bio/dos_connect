@@ -47,8 +47,8 @@ class KafkaHandler(object):
         _url = "s3://{}.s3-{}.amazonaws.com/{}".format(
                   bucket_name, region, _id)
         if endpoint_url:
-             parsed=urlparse(endpoint_url)
-             _url = 's3://{}.{}/{}'.format(bucket_name, parsed.netloc,  _id)
+            parsed = urlparse(endpoint_url)
+            _url = 's3://{}/{}/{}'.format(parsed.netloc, bucket_name,  _id)
         _system_metadata_fields = {
             'StorageClass': record['StorageClass'],
             "event_type": _event_type,
