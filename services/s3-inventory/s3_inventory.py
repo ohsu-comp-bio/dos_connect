@@ -6,6 +6,9 @@ import boto3
 import logging
 import argparse
 import urllib
+from kafka import KafkaProducer
+from botocore.client import Config
+from urlparse import urlparse
 
 logger = logging.getLogger('s3_inventory')
 
@@ -25,13 +28,13 @@ class KafkaHandler(object):
             'kafka_topic:{} kafka_bootstrap:{}'
             .format(kafka_topic, kafka_bootstrap))
 
-    def on_any_event(self, region, bucket_name, record):
+    def on_any_event(self, endpoint_url, region, bucket_name, record):
         try:
-            self.process(region, bucket_name, record)
+            self.process(endpoint_url, region, bucket_name, record)
         except Exception as e:
             logger.exception(e)
 
-    def process(self, region, bucket_name, record):
+    def process(self, endpoint_url, region, bucket_name, record):
         """
         {u'LastModified':
             datetime.datetime(2017, 10, 23, 16, 20, 45, tzinfo=tzutc()),
@@ -43,6 +46,9 @@ class KafkaHandler(object):
         _id = urllib.quote_plus(record['Key'])
         _url = "s3://{}.s3-{}.amazonaws.com/{}".format(
                   bucket_name, region, _id)
+        if endpoint_url:
+             parsed=urlparse(endpoint_url)
+             _url = 's3://{}.{}/{}'.format(bucket_name, parsed.netloc,  _id)
         _system_metadata_fields = {
             'StorageClass': record['StorageClass'],
             "event_type": _event_type,
@@ -94,6 +100,10 @@ if __name__ == "__main__":
                            default=False,
                            action='store_true')
 
+    argparser.add_argument('--endpoint_url', '-ep',
+                           help='''for swift, ceph and other non-aws endpoints''',
+                           default=None)
+
     argparser.add_argument('bucket_name',
                            help='''bucket_name to inventory''',
                            )
@@ -111,12 +121,26 @@ if __name__ == "__main__":
         dry_run=args.dry_run,
     )
 
-    client = boto3.client('s3')
+    # boto3.client('s3', 'us-west-2', config=Config(s3={'addressing_style': 'path'}))
+
+    # support non aws hosts
+    if args.endpoint_url:
+        use_ssl = True
+        if args.endpoint_url.startswith('http://'):
+            use_ssl = False
+        client = boto3.client(
+            's3', endpoint_url=args.endpoint_url, use_ssl=use_ssl,
+            config=Config(s3={'addressing_style': 'path'}, signature_version='s3')
+        )
+    else:
+        client = boto3.client('s3')
     paginator = client.get_paginator('list_objects')
     page_iterator = paginator.paginate(Bucket=args.bucket_name)
     for page in page_iterator:
         logger.debug(page)
-        region = page['ResponseMetadata']['HTTPHeaders']['x-amz-bucket-region']
+        region = None
+        if 'x-amz-bucket-region' in page['ResponseMetadata']['HTTPHeaders']:
+            region = page['ResponseMetadata']['HTTPHeaders']['x-amz-bucket-region']
         for record in page['Contents']:
             logger.debug(record)
-            event_handler.on_any_event(region, args.bucket_name, record)
+            event_handler.on_any_event(args.endpoint_url, region, args.bucket_name, record)
