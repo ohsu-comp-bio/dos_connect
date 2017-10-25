@@ -1,5 +1,10 @@
 from kafka import KafkaConsumer
+from elasticsearch import Elasticsearch
 import json
+import argparse
+import logging
+
+logger = logging.getLogger('elastic_sink')
 
 
 class ElasticHandler(object):
@@ -13,63 +18,27 @@ class ElasticHandler(object):
         self.elastic_url = elastic_url
         self.dry_run = dry_run
 
-    def on_any_event(self, endpoint_url, region, bucket_name, record):
+    def on_any_event(self, key, value):
         try:
-            self.process(endpoint_url, region, bucket_name, record)
+            self.process(key, value)
         except Exception as e:
             logger.exception(e)
 
-    def process(self, endpoint_url, region, bucket_name, record):
+    def process(self, key, value):
         """
-        {u'LastModified':
-            datetime.datetime(2017, 10, 23, 16, 20, 45, tzinfo=tzutc()),
-        u'ETag': '"d3b3a66c7235c6b09a55a626861f5f91"',
-        u'StorageClass': 'STANDARD',
-        u'Key': 'passport photo.JPG', u'Size': 341005}
         """
-        _event_type = 'ObjectCreated:Put'
+        self.to_elastic(key, value)
 
-        _id = record['Key']
-        _id_parts = _id.split('/')
-        _id_parts[-1] = urllib.quote_plus(_id_parts[-1])
-        _id = '/'.join(_id_parts)
-
-        _url = "s3://{}.s3-{}.amazonaws.com/{}".format(
-                  bucket_name, region, _id)
-        if endpoint_url:
-            parsed = urlparse(endpoint_url)
-            _url = 's3://{}/{}/{}'.format(parsed.netloc, bucket_name,  _id)
-        _system_metadata_fields = {
-            'StorageClass': record['StorageClass'],
-            "event_type": _event_type,
-            "bucket_name": bucket_name
-        }
-        data_object = {
-          "id": _id,
-          "file_size": record['Size'],
-          # The time, in ISO-8601,when S3 finished processing the request,
-          "created":  record['LastModified'].isoformat(),
-          "updated":  record['LastModified'].isoformat(),
-          # TODO multipart ...
-          # https://forums.aws.amazon.com/thread.jspa?messageID=203436&#203436
-          "checksum": record['ETag'],
-          "urls": [_url],
-          "system_metadata_fields": _system_metadata_fields
-        }
-        self.to_kafka(data_object)
-
-    def to_kafka(self, payload):
-        """ write dict to kafka """
-        key = '{}~{}'.format(payload['system_metadata_fields']['event_type'],
-                             payload['urls'][0])
+    def to_elastic(self, key, value):
+        """ write dict to elastic"""
         if self.dry_run:
             logger.debug(key)
-            logger.debug(payload)
+            logger.debug(value)
             return
-        producer = KafkaProducer(bootstrap_servers=self.kafka_bootstrap)
-        producer.send(args.kafka_topic, key=key, value=json.dumps(payload))
-        producer.flush()
-        logger.debug('sent to kafka: {} {}'.format(self.kafka_topic, key))
+        es = Elasticsearch([self.elastic_url])
+        logger.debug(key)
+        es.create(index='dos', doc_type='dos', id=value['checksum'], body=value)
+        logger.debug(value)
 
 
 if __name__ == "__main__":
@@ -94,7 +63,7 @@ if __name__ == "__main__":
                            help='''elasticsearch endpoint''',
                            default='localhost:9200')
 
-    argparser.add_argument('--group_id', '-e',
+    argparser.add_argument('--group_id', '-g',
                            help='''kafka consumer group''',
                            default='elastic_sink')
 
