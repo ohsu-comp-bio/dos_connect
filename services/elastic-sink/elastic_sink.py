@@ -36,9 +36,18 @@ class ElasticHandler(object):
             logger.debug(value)
             return
         es = Elasticsearch([self.elastic_url])
-        logger.debug(key)
-        es.create(index='dos', doc_type='dos', id=value['checksum'], body=value)
-        logger.debug(value)
+        if key.startswith('ObjectRemoved'):
+            logger.debug(key)
+            url = key.split('~')[1]
+            res = es.search(index='dos', doc_type='dos',
+                            q='url:{}'.format(url))
+            for doc in res['hits']['hits']:
+                del_rsp = es.delete(index='dos', doc_type='dos', id=doc['_id'])
+                logger.debug(del_rsp)
+        else:
+            es.create(index='dos', doc_type='dos',
+                      id=value['checksum'], body=value)
+            logger.debug(value)
 
 
 if __name__ == "__main__":
