@@ -1,9 +1,11 @@
 
-## Getting Started with Docker Compose
+## DOS events
 
-Kafka Single Node
-Read confluent doc  https://docs.confluent.io/current/cp-docker-images/docs/quickstart.html#getting-started-with-docker-compose
+![image](https://user-images.githubusercontent.com/47808/32019677-d39ac29a-b982-11e7-91f4-64924f6c5bd8.png)
 
+
+* For more, Read [confluent Kafka Single Node](https://docs.confluent.io/current/cp-docker-images/docs/quickstart.html#getting-started-with-docker-compose
+)  
 ### setup
   create .env file in the cloned repo
   ```
@@ -19,9 +21,13 @@ Read confluent doc  https://docs.confluent.io/current/cp-docker-images/docs/quic
   KAFKA_REST_ZOOKEEPER_CONNECT=$KAFKA_ZOOKEEPER_CONNECT
   KAFKA_REST_LISTENERS=http://localhost:8082
   KAFKA_REST_HOST_NAME=localhost
-  KAFKA_DOS_TOPIC=DOS-Topic
+  KAFKA_DOS_TOPIC=dos-topic
   KAFKA_TOPIC_UI_PORT=8000
-  SQS_QUEUE_NAME=dos-testing  
+  SQS_QUEUE_NAME=dos-testing
+  SWIFT_PORT=8080
+  AWS_TEST_BUCKET=dos-testing
+  SWIFT_TEST_BUCKET=etl-development
+  MONITOR_DIRECTORY=/files
   ```
 
   source the .env file
@@ -34,7 +40,8 @@ Read confluent doc  https://docs.confluent.io/current/cp-docker-images/docs/quic
   $bin/init
   ```
 
-  test the services
+### testing
+  * test the services
   ```
   $testing/aws-inventory
   $testing/aws-observer
@@ -43,9 +50,11 @@ Read confluent doc  https://docs.confluent.io/current/cp-docker-images/docs/quic
   $testing/swift-inventory
   $testing/swift-observer
   ```
+  * visit <hostname>:$KAFKA_TOPIC_UI_PORT to see the results
   ![image](https://user-images.githubusercontent.com/47808/32018643-62b37840-b97f-11e7-9203-0e1c7f41a0be.png)
 
 
+### clean
   to re-initialize the services
   ```
   $bin/clean
