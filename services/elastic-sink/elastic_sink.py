@@ -107,4 +107,3 @@ if __name__ == "__main__":
                                                message.offset,
                                                json.loads(message.value)))
         event_handler.on_any_event(message.key, json.loads(message.value))
-
