@@ -1,2 +1,0 @@
-ls -l > /tmp/testing.txt
-aws s3 cp /tmp/testing.txt s3://dos-testing

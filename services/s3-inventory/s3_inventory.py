@@ -43,7 +43,12 @@ class KafkaHandler(object):
         u'Key': 'passport photo.JPG', u'Size': 341005}
         """
         _event_type = 'ObjectCreated:Put'
-        _id = urllib.quote_plus(record['Key'])
+
+        _id = record['Key']
+        _id_parts = _id.split('/')
+        _id_parts[-1] = urllib.quote_plus(_id_parts[-1])
+        _id = '/'.join(_id_parts)
+
         _url = "s3://{}.s3-{}.amazonaws.com/{}".format(
                   bucket_name, region, _id)
         if endpoint_url:

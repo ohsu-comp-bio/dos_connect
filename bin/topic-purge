@@ -1,0 +1,4 @@
+echo "## Purging $1"
+
+bin/topic-delete $1
+bin/topic-create $1

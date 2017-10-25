@@ -12,15 +12,9 @@ mkdir -p volumes/jars
 mkdir -p volumes/files
 mkdir -p volumes/elastic/backups
 
-echo "## checking for successful build of our connectors ..."
-if [ -e "volumes/jars/connect-directory-source-1.0-all.jar" ]; then
-  echo "connect-directory-source-1.0-all.jar OK"
-else
-  ( bin/build-connectors )
-fi
-
+# start core services
 echo "## create docker compose images..."
-docker-compose create 
+docker-compose create
 echo "## start docker compose images for zookeeper kafka..."
 docker-compose start zookeeper kafka
 
@@ -31,10 +25,9 @@ until $(docker-compose logs kafka | grep started > /dev/null); do
 done
 echo "kafka up OK"
 
-
-echo "## create s3-topic ..."
-bin/purge s3-topic
+# create whatever topics here.
+bin/topic-create $KAFKA_DOS_TOPIC
 
 
 echo "## start remainder of containers ...."
-docker-compose start  
+docker-compose start
