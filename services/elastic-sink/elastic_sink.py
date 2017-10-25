@@ -40,7 +40,7 @@ class ElasticHandler(object):
             logger.debug(key)
             url = key.split('~')[1]
             res = es.search(index='dos', doc_type='dos',
-                            q='url:{}'.format(url))
+                            q='url:\"{}\"'.format(url))
             for doc in res['hits']['hits']:
                 del_rsp = es.delete(index='dos', doc_type='dos', id=doc['_id'])
                 logger.debug(del_rsp)
@@ -76,6 +76,11 @@ if __name__ == "__main__":
                            help='''kafka consumer group''',
                            default='elastic_sink')
 
+    argparser.add_argument('--enable_auto_commit', '-ac',
+                           help='''commit offsets ''',
+                           default=False,
+                           action='store_true')
+
     args = argparser.parse_args()
     logger.setLevel(logging.DEBUG)
     ch = logging.StreamHandler()
@@ -91,9 +96,9 @@ if __name__ == "__main__":
     consumer = KafkaConsumer(args.kafka_topic,
                              group_id=args.group_id,
                              bootstrap_servers=[args.kafka_bootstrap],
-                             consumer_timeout_ms=5000,
+                             # consumer_timeout_ms=10000,
                              auto_offset_reset='earliest',
-                             enable_auto_commit=False)
+                             enable_auto_commit=args.enable_auto_commit)
     for message in consumer:
         # message value and key are raw bytes -- decode if necessary!
         # e.g., for unicode: `message.value.decode('utf-8')`
@@ -102,3 +107,4 @@ if __name__ == "__main__":
                                                message.offset,
                                                json.loads(message.value)))
         event_handler.on_any_event(message.key, json.loads(message.value))
+
