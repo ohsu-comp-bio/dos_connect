@@ -16,6 +16,7 @@ import time
 import argparse
 from stat import *
 import json
+import re
 
 logger = logging.getLogger('file_observer')
 
@@ -26,7 +27,8 @@ class KafkaHandler(PatternMatchingEventHandler):
 
     def __init__(self, patterns=None, ignore_patterns=None,
                  ignore_directories=False, case_sensitive=False,
-                 kafka_topic=None, kafka_bootstrap=None, monitor_directory=None):
+                 kafka_topic=None, kafka_bootstrap=None,
+                 dry_run=False, monitor_directory=None):
         super(KafkaHandler, self).__init__(patterns,
                                            ignore_patterns,
                                            ignore_directories,
@@ -34,6 +36,7 @@ class KafkaHandler(PatternMatchingEventHandler):
         self.kafka_topic = kafka_topic
         self.kafka_bootstrap = kafka_bootstrap
         self.monitor_directory = monitor_directory
+        self.dry_run = dry_run
         logger.debug(
             'patterns:{} kafka_topic:{} kafka_bootstrap:{}'
             .format(patterns, kafka_topic, kafka_bootstrap))
@@ -48,7 +51,7 @@ class KafkaHandler(PatternMatchingEventHandler):
         if (event.is_directory):
             return
         if event.event_type == 'modified':
-	    return
+            return
 
         event_methods = {
             'deleted': 'ObjectRemoved:Delete',
@@ -56,11 +59,10 @@ class KafkaHandler(PatternMatchingEventHandler):
             'created': 'ObjectCreated:Put',
             'modified': 'ObjectCreated:Put'
         }
-        logger.info(str(event))
-        logger.info(event.src_path)
-        logger.info(self.monitor_directory)
-        _id = event.src_path.lstrip(self.monitor_directory)
-        data_object = { 
+        _id = re.sub(r'^' + self.monitor_directory + '/', '', event.src_path)
+
+        event.src_path.lstrip(self.monitor_directory)
+        data_object = {
           "id": _id,
           "urls": [self.path2url(event.src_path)],
           "system_metadata_fields": {"event_type":
@@ -102,6 +104,9 @@ class KafkaHandler(PatternMatchingEventHandler):
 
     def to_kafka(self, payload):
         """ write dict to kafka """
+        if self.dry_run:
+            logger.debug(payload)
+            return
         producer = KafkaProducer(bootstrap_servers=self.kafka_bootstrap)
         key = '{}~{}~{}'.format(payload['system_metadata_fields']['event_type'],
                                 payload['system_metadata_fields']['bucket_name'],
@@ -148,6 +153,11 @@ if __name__ == "__main__":
                            default=False,
                            action='store_true')
 
+    argparser.add_argument('--dry_run', '-d',
+                           help='''dry run''',
+                           default=False,
+                           action='store_true')
+
     argparser.add_argument('monitor_directory',
                            help='''directory to monitor''',
                            default='.')
@@ -166,17 +176,20 @@ if __name__ == "__main__":
         case_sensitive=args.case_sensitive,
         kafka_topic=args.kafka_topic,
         kafka_bootstrap=args.kafka_bootstrap,
-        monitor_directory=args.monitor_directory
+        monitor_directory=args.monitor_directory,
+        dry_run=args.dry_run,
     )
 
-    for root, dirs, files in os.walk(path):
-        if not args.ignore_directories:
-            for name in dirs:
-                event_handler.on_any_event(DirCreatedEvent(
-                    os.path.join(path, name)))
-        for name in files:
-            event_handler.on_any_event(FileCreatedEvent(
-                    os.path.join(path, name)))
+    if args.inventory:
+        for root, dirs, files in os.walk(path):
+            if not args.ignore_directories:
+                for name in dirs:
+                    event_handler.on_any_event(DirCreatedEvent(
+                        os.path.join(root, name)))
+            for name in files:
+                logger.debug
+                event_handler.on_any_event(FileCreatedEvent(
+                        os.path.join(root, name)))
 
     observer = Observer()
     observer.schedule(event_handler, path, recursive=True)
