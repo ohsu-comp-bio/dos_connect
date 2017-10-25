@@ -7,7 +7,7 @@ services:
     image: confluentinc/cp-zookeeper:latest
     network_mode: host
     environment:
-      ZOOKEEPER_CLIENT_PORT: $ZOOKEEPER_CLIENT_PORT
+      ZOOKEEPER_CLIENT_PORT: ${ZOOKEEPER_CLIENT_PORT}
       ZOOKEEPER_TICK_TIME: 2000
 
   # core service
@@ -18,8 +18,8 @@ services:
       - zookeeper
     environment:
       KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: $KAFKA_ZOOKEEPER_CONNECT
-      KAFKA_ADVERTISED_LISTENERS: $KAFKA_ADVERTISED_LISTENERS
+      KAFKA_ZOOKEEPER_CONNECT: ${KAFKA_ZOOKEEPER_CONNECT}
+      KAFKA_ADVERTISED_LISTENERS: ${KAFKA_ADVERTISED_LISTENERS}
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_DELETE_TOPIC_ENABLE: "true"
 
@@ -31,19 +31,19 @@ services:
       - zookeeper
       - kafka
     environment:
-      KAFKA_REST_ZOOKEEPER_CONNECT: $KAFKA_REST_ZOOKEEPER_CONNECT
-      KAFKA_REST_LISTENERS: $KAFKA_REST_LISTENERS
-      KAFKA_REST_HOST_NAME: $KAFKA_REST_HOST_NAME
-      KAFKA_REST_BOOTSTRAP_SERVERS: $KAFKA_BOOTSTRAP_SERVERS
+      KAFKA_REST_ZOOKEEPER_CONNECT: ${KAFKA_REST_ZOOKEEPER_CONNECT}
+      KAFKA_REST_LISTENERS: ${KAFKA_REST_LISTENERS}
+      KAFKA_REST_HOST_NAME: ${KAFKA_REST_HOST_NAME}
+      KAFKA_REST_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
 
   # devops service: provide a ui to examine kafka topics
   ui:
     image: landoop/kafka-topics-ui
     ports:
-      - "$KAFKA_TOPIC_UI_PORT:$KAFKA_TOPIC_UI_PORT"
+      - "${KAFKA_TOPIC_UI_PORT}:${KAFKA_TOPIC_UI_PORT}"
     network_mode: host
     environment:
-      - KAFKA_REST_PROXY_URL=KAFKA_REST_LISTENERS
+      - KAFKA_REST_PROXY_URL=${KAFKA_REST_LISTENERS}
       - PROXY=true
 
   # user service: swift instance with our webhook
@@ -51,7 +51,7 @@ services:
     build:
       context: services/swift
     ports:
-      - "$SWIFT_PORT:$SWIFT_PORT"
+      - "${SWIFT_PORT}:${SWIFT_PORT}"
     network_mode: host
     volumes:
       # For testing from host
@@ -60,8 +60,8 @@ services:
       # TODO do env subsitute
       # coordinate with services/swift/files/proxy-server.conf
       - http.host=0.0.0.0
-      - KAFKA_TOPIC=$KAFKA_DOS_TOPIC
-      - KAFKA_BOOTSTRAP=$KAFKA_BOOTSTRAP_SERVERS
+      - KAFKA_TOPIC=${KAFKA_DOS_TOPIC}
+      - KAFKA_BOOTSTRAP=${KAFKA_BOOTSTRAP_SERVERS}
 
   # user service: monitor aws SQS queue
   aws-observer:
@@ -72,12 +72,12 @@ services:
       - kafka
     network_mode: host
     environment:
-      - KAFKA_TOPIC=$KAFKA_DOS_TOPIC
-      - KAFKA_BOOTSTRAP=$KAFKA_BOOTSTRAP_SERVERS
-      - SQS_QUEUE_NAME=$SQS_QUEUE_NAME
-      - AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION
-      - AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
-      - AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+      - KAFKA_TOPIC=${KAFKA_DOS_TOPIC}
+      - KAFKA_BOOTSTRAP=${KAFKA_BOOTSTRAP_SERVERS}
+      - SQS_QUEUE_NAME=${SQS_QUEUE_NAME}
+      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
 
   # user service: monitor file system
   file-observer:
@@ -90,8 +90,8 @@ services:
     volumes:
       - "./volumes/files:/files"
     environment:
-      - KAFKA_TOPIC=$KAFKA_DOS_TOPIC
-      - KAFKA_BOOTSTRAP=$KAFKA_BOOTSTRAP_SERVERS
+      - KAFKA_TOPIC=${KAFKA_DOS_TOPIC}
+      - KAFKA_BOOTSTRAP=${KAFKA_BOOTSTRAP_SERVERS}
       - MONITOR_DIRECTORY=/files
 
 

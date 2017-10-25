@@ -29,7 +29,12 @@ Read confluent doc  https://docs.confluent.io/current/cp-docker-images/docs/quic
   $export  $(cat ~/kafka-connect/.env | xargs )
   ```
 
-  initialize the system
+  initialize the services
   ```
   $bin/init
+  ```
+
+  to re-initialize the services
+  ```
+  $bin/clean
   ```
