@@ -1,0 +1,137 @@
+---
+version: '2'
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    network_mode: host
+    environment:
+      ZOOKEEPER_CLIENT_PORT: $ZOOKEEPER_CLIENT_PORT
+      ZOOKEEPER_TICK_TIME: 2000
+
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    network_mode: host
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: $KAFKA_ZOOKEEPER_CONNECT
+      KAFKA_ADVERTISED_LISTENERS: $KAFKA_ADVERTISED_LISTENERS
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_DELETE_TOPIC_ENABLE: "true"
+
+  kafka-rest:
+    image: confluentinc/cp-kafka-rest:3.3.0
+    network_mode: host
+    depends_on:
+      - zookeeper
+      - kafka
+    environment:
+      KAFKA_REST_ZOOKEEPER_CONNECT: $KAFKA_REST_ZOOKEEPER_CONNECT
+      KAFKA_REST_LISTENERS: $KAFKA_REST_LISTENERS
+      KAFKA_REST_HOST_NAME: $KAFKA_REST_HOST_NAME
+      KAFKA_REST_BOOTSTRAP_SERVERS: $KAFKA_BOOTSTRAP_SERVERS
+
+  # kafka-connect:
+  #   image: confluentinc/cp-kafka-connect:3.3.0
+  #   network_mode: host
+  #   depends_on:
+  #     - zookeeper
+  #     - kafka
+  #   volumes:
+  #     # Specify an absolute path mapping
+  #     - "./volumes/jars:/etc/kafka-connect/jars"
+  #     - "./volumes/files:/files"
+  #   environment:
+  #     CONNECT_PRODUCER_INTERCEPTOR_CLASSES: io.confluent.monitoring.clients.interceptor.MonitoringProducerInterceptor
+  #     CONNECT_CONSUMER_INTERCEPTOR_CLASSES: io.confluent.monitoring.clients.interceptor.MonitoringConsumerInterceptor
+  #     CONNECT_BOOTSTRAP_SERVERS: localhost:29092
+  #     CONNECT_REST_PORT: 28082
+  #     CONNECT_GROUP_ID: "quickstart"
+  #     CONNECT_CONFIG_STORAGE_TOPIC: "quickstart-config"
+  #     CONNECT_OFFSET_STORAGE_TOPIC: "quickstart-offsets"
+  #     CONNECT_STATUS_STORAGE_TOPIC: "quickstart-status"
+  #     CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 1
+  #     CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 1
+  #     CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 1
+  #     CONNECT_KEY_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
+  #     CONNECT_VALUE_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
+  #     CONNECT_INTERNAL_KEY_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
+  #     CONNECT_INTERNAL_VALUE_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
+  #     CONNECT_REST_ADVERTISED_HOST_NAME: "localhost"
+  #     CONNECT_LOG4J_ROOT_LOGLEVEL: INFO
+  #     CONNECT_LOG4J_LOGGERS: "org.reflections: ERROR"
+  #     AWS_ACCESS_KEY_ID: 724596f1fe184f02b8c682fa2734a4e6
+  #     AWS_SECRET_ACCESS_KEY: ae40a4e76d1d4aeea74b85142b18a8fb
+
+
+  # Elastic Search
+  # note: on docker for mac, you may need to adjust the docker-machines' config
+  # if you get this error ....
+  # elastic    | ERROR: bootstrap checks failed
+  # elastic    | max virtual memory areas vm.max_map_count [65530] likely too low, increase to at least [262144]
+  # ... see this
+  # https://github.com/elastic/elasticsearch-docker/blob/master/README.md#osx-with-docker-toolbox
+  elastic:
+    image: docker.elastic.co/elasticsearch/elasticsearch:5.5.3
+    volumes:
+      - "./volumes/elastic/backups:/backups/"
+    ports:
+      - "9200:9200"
+    network_mode: host
+    environment:
+      - http.host=0.0.0.0
+      - transport.host=127.0.0.1
+      - xpack.security.enabled=false
+      - path.repo=/backups
+
+  swift:
+    build:
+      context: services/swift
+    ports:
+      - "8080:8080"
+    network_mode: host
+    # coordinate with services/swift/files/proxy-server.conf
+    environment:
+      - http.host=0.0.0.0
+      - KAFKA_TOPIC=$KAFKA_DOS_TOPIC
+      - KAFKA_BOOTSTRAP=$KAFKA_BOOTSTRAP_SERVERS
+
+  ui:
+    image: landoop/kafka-topics-ui
+    ports:
+      - "$KAFKA_TOPIC_UI_PORT:$KAFKA_TOPIC_UI_PORT"
+    network_mode: host
+    environment:
+      - KAFKA_REST_PROXY_URL=KAFKA_REST_LISTENERS
+      - PROXY=true
+
+  sqs-observer:
+    build:
+      context: services/sqs-observer
+    depends_on:
+      - zookeeper
+      - kafka
+    network_mode: host
+    environment:
+      - KAFKA_TOPIC=$KAFKA_DOS_TOPIC
+      - KAFKA_BOOTSTRAP=$KAFKA_BOOTSTRAP_SERVERS
+      - SQS_QUEUE_NAME=$SQS_QUEUE_NAME
+      - AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION
+      - AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+      - AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+
+
+  file-observer:
+    build:
+      context: services/file-observer
+    network_mode: host
+    depends_on:
+      - zookeeper
+      - kafka
+    volumes:
+      - "./volumes/files:/files"
+    environment:
+      - KAFKA_TOPIC=$KAFKA_DOS_TOPIC
+      - KAFKA_BOOTSTRAP=$KAFKA_BOOTSTRAP_SERVERS
+      - MONITOR_DIRECTORY=/files

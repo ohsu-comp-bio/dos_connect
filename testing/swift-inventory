@@ -1,0 +1,7 @@
+docker run --rm \
+  --network=host \
+  -e AWS_ACCESS_KEY_ID=724596f1fe184f02b8c682fa2734a4e6 \
+  -e AWS_SECRET_ACCESS_KEY=ae40a4e76d1d4aeea74b85142b18a8fb \
+  s3-inventory:latest   python s3_inventory.py \
+  --kafka_topic $KAFKA_DOS_TOPIC --kafka_bootstrap $KAFKA_BOOTSTRAP_SERVERS --endpoint_url http://10.96.11.20:8080 \
+  $SWIFT_TEST_BUCKET

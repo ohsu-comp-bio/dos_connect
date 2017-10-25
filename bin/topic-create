@@ -1,0 +1,17 @@
+echo "## Deleting $1" 
+
+# create it if not exists
+docker run \
+  --net=host \
+  --rm \
+  confluentinc/cp-kafka:3.3.0 \
+  kafka-topics --delete --topic $1 --if-exists --zookeeper localhost:32181 
+
+echo "## Creating $1" 
+# create it if not exists
+docker run \
+  --net=host \
+  --rm \
+  confluentinc/cp-kafka:3.3.0 \
+  kafka-topics --create --topic $1 --partitions 1 --replication-factor 1 --if-not-exists --zookeeper localhost:32181 > /dev/null
+

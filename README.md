@@ -1,11 +1,52 @@
 
-## Getting Started with Docker Compose 
+## Getting Started with Docker Compose
 
+Kafka Single Node
 Read confluent doc  https://docs.confluent.io/current/cp-docker-images/docs/quickstart.html#getting-started-with-docker-compose
-Note: we are not using docker-machine. start from `2 Clone the CP Docker Images Github Repository.`
 
 ### setup
-  Just run `setup.sh` this will setup a docker composition of zookeeper, kafka, kafka-rest, kafka-connect (with a customized directory watcher)
-  ![image](https://user-images.githubusercontent.com/47808/31259202-d892eb4e-a9f9-11e7-8b6c-e9b34b5d398b.png)
+  create .env file in the cloned repo
+  ```
+  AWS_ACCESS_KEY_ID=XXXXX
+  AWS_SECRET_ACCESS_KEY=XXXXX
+  AWS_DEFAULT_REGION=us-west-2
+  SWIFT_ACCESS_KEY_ID=YYY
+  SWIFT_SECRET_ACCESS_KEY=YYY
+  ZOOKEEPER_CLIENT_PORT=32181
+  KAFKA_ZOOKEEPER_CONNECT=localhost:32181
+  KAFKA_BOOTSTRAP_SERVERS=localhost:29092
+  KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://$KAFKA_BOOTSTRAP_SERVERS
+  KAFKA_REST_ZOOKEEPER_CONNECT=$KAFKA_ZOOKEEPER_CONNECT
+  KAFKA_REST_LISTENERS=http://localhost:8082
+  KAFKA_REST_HOST_NAME=localhost
+  KAFKA_DOS_TOPIC=DOS-Topic
+  KAFKA_TOPIC_UI_PORT=8000
+  SQS_QUEUE_NAME=dos-testing  
+  ```
+
+  source the .env file
+  ```
+  $export  $(cat ~/kafka-connect/.env | xargs )
+  ```
+
+  initialize the services
+  ```
+  $bin/init
+  ```
+
+  test the services
+  ```
+  $testing/aws-inventory
+  $testing/aws-observer
+  $testing/file-inventory
+  $testing/file-observer
+  $testing/swift-inventory
+  $testing/swift-observer
+  ```
+  ![image](https://user-images.githubusercontent.com/47808/32018643-62b37840-b97f-11e7-9203-0e1c7f41a0be.png)
 
 
+  to re-initialize the services
+  ```
+  $bin/clean
+  ```

@@ -1,0 +1,3 @@
+ls -l > volumes/files/testing.txt
+docker-compose exec swift bash -c "swift -A http://127.0.0.1:8080/auth/v1.0 -U test:tester -K testing  upload $SWIFT_TEST_BUCKET /files/testing.txt"
+docker-compose exec swift bash -c "swift -A http://127.0.0.1:8080/auth/v1.0 -U test:tester -K testing  delete $SWIFT_TEST_BUCKET files/testing.txt"

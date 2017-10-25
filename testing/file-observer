@@ -1,0 +1,3 @@
+#!/bin/bash
+ls -l > volumes/files/testing-file-observer.txt
+rm  volumes/files/testing-file-observer.txt
