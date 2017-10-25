@@ -109,6 +109,9 @@ services:
   sqs-observer:
     build:
       context: services/sqs-observer
+    depends_on:
+      - zookeeper
+      - kafka
     network_mode: host
     environment:
       - KAFKA_TOPIC=s3-topic
@@ -123,6 +126,9 @@ services:
     build:
       context: services/file-observer
     network_mode: host
+    depends_on:
+      - zookeeper
+      - kafka
     volumes:
       - "./volumes/files:/files"
     environment:
