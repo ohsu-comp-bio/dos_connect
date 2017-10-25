@@ -21,13 +21,20 @@ fi
 
 echo "## create docker compose images..."
 docker-compose create 
-echo "## start docker compose images..."
-docker-compose start
+echo "## start docker compose images for zookeeper kafka..."
+docker-compose start zookeeper kafka
 
-echo "## wait for kafka connect to start up..."
-until $(curl --output /dev/null --silent  --fail localhost:28082/connectors); do
+echo "## wait for kafka to start up..."
+until $(docker-compose logs kafka | grep started > /dev/null); do
     printf '.'
     sleep 5
 done
-echo "kafka connect up OK"
+echo "kafka up OK"
 
+
+echo "## create s3-topic ..."
+bin/purge s3-topic
+
+
+echo "## start remainder of containers ...."
+docker-compose start  
