@@ -58,8 +58,12 @@ A elastic-sink service is provided to illustrate the consuming from the topic an
   $testing/swift-inventory
   $testing/swift-observer
   ```
-  * visit <hostname>:$KAFKA_TOPIC_UI_PORT to see the results
+  * visit hostname:$KAFKA_TOPIC_UI_PORT to see the results
   ![image](https://user-images.githubusercontent.com/47808/32018643-62b37840-b97f-11e7-9203-0e1c7f41a0be.png)
+
+  * see results in elastic
+  ![image](https://user-images.githubusercontent.com/47808/32027500-3787c350-b99e-11e7-8da2-77e38509af33.png)
+
 
 
 ### clean

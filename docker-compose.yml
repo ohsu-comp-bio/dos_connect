@@ -95,6 +95,20 @@ services:
       - MONITOR_DIRECTORY=/files
 
 
+  # user service: monitor topic, write to elastic
+  elastic-sink:
+    build:
+      context: services/elastic-sink
+    network_mode: host
+    depends_on:
+      - zookeeper
+      - kafka
+      - elastic
+    environment:
+      - KAFKA_TOPIC=${KAFKA_DOS_TOPIC}
+      - KAFKA_BOOTSTRAP=${KAFKA_BOOTSTRAP_SERVERS}
+      - ELASTIC_URL=${ELASTIC_URL}
+      
 
   # Elastic Search
   # note: on docker for mac, you may need to adjust the docker-machines' config

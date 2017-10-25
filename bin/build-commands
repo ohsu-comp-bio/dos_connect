@@ -2,6 +2,6 @@
 pushd services/file-observer/
 docker build -t file-inventory .
 popd
-pushd services/file-observer/
+pushd services/s3-inventory/
 docker build -t s3-inventory .
 popd
