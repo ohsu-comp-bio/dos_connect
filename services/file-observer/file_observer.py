@@ -17,6 +17,7 @@ import argparse
 from stat import *
 import json
 import re
+import urllib
 
 logger = logging.getLogger('file_observer')
 
@@ -60,6 +61,7 @@ class KafkaHandler(PatternMatchingEventHandler):
             'modified': 'ObjectCreated:Put'
         }
         _id = re.sub(r'^' + self.monitor_directory + '/', '', event.src_path)
+        _id = urllib.quote_plus(_id)
 
         event.src_path.lstrip(self.monitor_directory)
         data_object = {
@@ -108,9 +110,8 @@ class KafkaHandler(PatternMatchingEventHandler):
             logger.debug(payload)
             return
         producer = KafkaProducer(bootstrap_servers=self.kafka_bootstrap)
-        key = '{}~{}~{}'.format(payload['system_metadata_fields']['event_type'],
-                                payload['system_metadata_fields']['bucket_name'],
-                                payload.get('id', None))
+        key = '{}~{}'.format(payload['system_metadata_fields']['event_type'],
+                             payload['urls'][0])
         producer.send(args.kafka_topic, key=key, value=json.dumps(payload))
         producer.flush()
         logger.debug('sent to kafka: {} {}'.format(self.kafka_topic, key))

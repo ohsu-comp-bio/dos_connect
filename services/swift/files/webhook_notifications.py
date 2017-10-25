@@ -12,11 +12,8 @@ To configure, in proxy-server.conf:
 
     [filter:webhookmiddleware]
     paste.filter_factory = swift.common.middleware.webhook_notifications:filter_factory
-
-    publisher_id = swift.localhost
-    transport_url = http(s)://user:password@host:port/
-    notification_driver = messaging
-    notification_topics = notifications
+    kafka_bootstrap = localhost:29092
+    kafka_topic = s3-topic
 
 Additionally, in pipeline:main, add webhookmiddleware to the pipeline;
 it should be added towards the end to ensure any required environment
@@ -42,6 +39,7 @@ from swift.common.utils import get_logger
 import requests
 import json
 from kafka import KafkaProducer
+import urllib
 
 
 class WebHookContext(wsgi.WSGIContext):
@@ -178,7 +176,7 @@ class WebHookContext(wsgi.WSGIContext):
                                   ('Content-Type', 'content-type')):
                         set_field_if_exists(*field)
 
-            self._notifier.info({}, event_type, payload)
+            self._notifier.notify({}, event_type, payload)
 
         # We don't want to tamper with the response
         start_response(self._response_status,
@@ -201,61 +199,57 @@ class LoggingNotifier(object):
         system_metadata_fields = {}
         for field in fields:
             system_metadata_fields[field] = swift[field]
+        _id = urllib.quote_plus(swift['object'])
         data_object = {
-          "id": swift['object'],
+          "id": _id,
           "file_size": swift['content-length'],
           "created": swift['updated_at'],
           "updated": swift['updated_at'],
           "checksum": swift['etag'],
-          "urls": ["swift://{}/{}".format(swift['container'],swift['object'])],
+          "urls": ["swift://{}/{}".format(swift['container'], _id)],
           "system_metadata_fields": system_metadata_fields
         }
         return data_object
 
-
-    def info(self, obj, event_type, payload):
+    def notify(self, obj, event_type, payload):
         try:
             payload['event_type'] = event_type
-            self.logger.info('webhook_filter::WebHookMiddleware::LoggingNotifier')
-            self.logger.info('event_type:{}'.format(event_type))
-            self.logger.info(payload)
             api_url = self.conf.get('api_url', None)
-            self.logger.info('api_url:{}'.format(api_url))
             kafka_topic = self.conf.get('kafka_topic', None)
-            self.logger.info('kafka_topic:{}'.format(kafka_topic))
             kafka_bootstrap = self.conf.get('kafka_bootstrap', None)
-            self.logger.info('kafka_bootstrap:{}'.format(kafka_bootstrap))
+            # self.logger.debug('event_type:{}'.format(event_type))
+            # self.logger.debug(payload)
+            # self.logger.debug('api_url:{}'.format(api_url))
+            # self.logger.debug('kafka_topic:{}'.format(kafka_topic))
+            # self.logger.debug('kafka_bootstrap:{}'.format(kafka_bootstrap))
             if api_url:
                 r = requests.post(api_url,
                                   data=json.dumps(payload),
                                   headers={"content-type": "application/json"})
-                self.logger.info(r.status_code)
-                self.logger.info(r.headers['content-type'])
-                self.logger.info(r.content)
+                self.logger.debug(r.status_code)
+                self.logger.debug(r.headers['content-type'])
+                self.logger.debug(r.content)
             if kafka_topic:
                 """ write dict to kafka """
                 producer = KafkaProducer(bootstrap_servers=kafka_bootstrap)
                 payload = self.to_data_object(payload)
-                key = '{}~{}~{}'.format(payload['system_metadata_fields']['event_type'],
-                                        payload['system_metadata_fields']['container'],
-                                        payload.get('checksum', None))
+                key = '{}~{}'.format(payload['system_metadata_fields']['event_type'],
+                                     payload['urls'][0])
                 producer.send(kafka_topic, key=key, value=json.dumps(payload))
                 producer.flush()
-                logger.info('sent to kafka topic: {}'.format(kafka_topic))
+                logger.debug('sent to kafka topic: {}'.format(kafka_topic))
 
         except Exception as e:
-            self.logger.error(e)
+            self.logger.exception(e)
 
 
 class WebHookMiddleware(object):
     def __init__(self, app, conf):
         self._app = app
         self.logger = get_logger(conf, log_route='webhook')
-        self.logger.info("webhook_filter::WebHookMiddleware")
         self._notifier = LoggingNotifier(self.logger, conf)
 
     def __call__(self, env, start_response):
-        self.logger.info("webhook_filter::WebHookMiddleware.__call__")
         messaging_context = WebHookContext(self._app, self._notifier)
         return messaging_context.handle_request(env, start_response)
 
@@ -264,7 +258,7 @@ def filter_factory(global_conf, **local_conf):
     conf = global_conf.copy()
     conf.update(local_conf)
     logger = get_logger(conf, log_route='webhook')
-    logger.info("webhook_filter::filter_factory conf: {}".format(conf))
+    logger.debug("webhook_filter::filter_factory conf: {}".format(conf))
 
     def webhook_filter(app):
         return WebHookMiddleware(app, conf)

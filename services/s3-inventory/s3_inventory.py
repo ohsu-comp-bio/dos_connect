@@ -5,7 +5,7 @@ import json
 import boto3
 import logging
 import argparse
-
+import urllib
 
 logger = logging.getLogger('s3_inventory')
 
@@ -25,81 +25,58 @@ class KafkaHandler(object):
             'kafka_topic:{} kafka_bootstrap:{}'
             .format(kafka_topic, kafka_bootstrap))
 
-    def on_any_event(self, event):
+    def on_any_event(self, region, bucket_name, record):
         try:
-            self.process(event)
+            self.process(region, bucket_name, record)
         except Exception as e:
             logger.exception(e)
 
-    def process(self, event):
-
-        event_methods = {
-            'deleted': 'ObjectRemoved:Delete',
-            'moved': 'ObjectCreated:Copy',
-            'created': 'ObjectCreated:Put',
-            'modified': 'ObjectCreated:Put'
+    def process(self, region, bucket_name, record):
+        """
+        {u'LastModified':
+            datetime.datetime(2017, 10, 23, 16, 20, 45, tzinfo=tzutc()),
+        u'ETag': '"d3b3a66c7235c6b09a55a626861f5f91"',
+        u'StorageClass': 'STANDARD',
+        u'Key': 'passport photo.JPG', u'Size': 341005}
+        """
+        _event_type = 'ObjectCreated:Put'
+        _id = urllib.quote_plus(record['Key'])
+        _url = "s3://{}.s3-{}.amazonaws.com/{}".format(
+                  bucket_name, region, _id)
+        _system_metadata_fields = {
+            'StorageClass': record['StorageClass'],
+            "event_type": _event_type,
+            "bucket_name": bucket_name
         }
-        _id = event.src_path
-
-        event.src_path.lstrip(self.monitor_directory)
         data_object = {
           "id": _id,
-          "urls": [self.path2url(event.src_path)],
-          "system_metadata_fields": {"event_type":
-                                     event_methods.get(event.event_type),
-                                     "bucket_name": self.monitor_directory}
+          "file_size": record['Size'],
+          # The time, in ISO-8601,when S3 finished processing the request,
+          "created":  record['LastModified'].isoformat(),
+          "updated":  record['LastModified'].isoformat(),
+          # TODO multipart ...
+          # https://forums.aws.amazon.com/thread.jspa?messageID=203436&#203436
+          "checksum": record['ETag'],
+          "urls": [_url],
+          "system_metadata_fields": _system_metadata_fields
         }
-
-        if not event.event_type == 'deleted':
-            f = os.stat(event.src_path)
-            if not S_ISREG(f.st_mode):
-                return
-            data_object = {
-              "id": _id,
-              "file_size": f.st_size,
-              # The time, in ISO-8601,when S3 finished processing the request,
-              "created":  datetime.datetime.fromtimestamp(f.st_ctime).isoformat(),
-              "updated":  datetime.datetime.fromtimestamp(f.st_mtime).isoformat(),
-              # TODO multipart ...
-              # https://forums.aws.amazon.com/thread.jspa?messageID=203436&#203436
-              "checksum": self.md5sum(event.src_path),
-              "urls": [self.path2url(event.src_path)],
-              "system_metadata_fields": {"event_type":
-                                         event_methods.get(event.event_type),
-                                         "bucket_name": self.monitor_directory}
-            }
         self.to_kafka(data_object)
-
-    def md5sum(self, filename, blocksize=65536):
-        hash = hashlib.md5()
-        with open(filename, "rb") as f:
-            for block in iter(lambda: f.read(blocksize), b""):
-                hash.update(block)
-        return hash.hexdigest()
-
-    def path2url(self, path):
-        return urlparse.urljoin(
-          'file://{}'.format(socket.gethostname()),
-          urllib.pathname2url(os.path.abspath(path)))
 
     def to_kafka(self, payload):
         """ write dict to kafka """
+        key = '{}~{}'.format(payload['system_metadata_fields']['event_type'],
+                             payload['urls'][0])
         if self.dry_run:
+            logger.debug(key)
             logger.debug(payload)
             return
         producer = KafkaProducer(bootstrap_servers=self.kafka_bootstrap)
-        key = '{}~{}~{}'.format(payload['system_metadata_fields']['event_type'],
-                                payload['system_metadata_fields']['bucket_name'],
-                                payload.get('id', None))
         producer.send(args.kafka_topic, key=key, value=json.dumps(payload))
         producer.flush()
         logger.debug('sent to kafka: {} {}'.format(self.kafka_topic, key))
 
 
 if __name__ == "__main__":
-    # logging.basicConfig(level=logging.INFO,
-    #                     format='%(asctime)s - %(message)s',
-    #                     datefmt='%Y-%m-%d %H:%M:%S')
 
     argparser = argparse.ArgumentParser(
         description='Consume events from bucket, populate kafka')
@@ -134,10 +111,12 @@ if __name__ == "__main__":
         dry_run=args.dry_run,
     )
 
-    s3 = boto3.client('s3')
-    # bucket = s3.Bucket(args.bucket_name)
-    # for obj in bucket.get_all_keys():
-    #     print(obj.key)
-    response = s3.list_objects_v2(Bucket=args.bucket_name)
-    for content in response['Contents']:
-        logger.debug(content)
+    client = boto3.client('s3')
+    paginator = client.get_paginator('list_objects')
+    page_iterator = paginator.paginate(Bucket=args.bucket_name)
+    for page in page_iterator:
+        logger.debug(page)
+        region = page['ResponseMetadata']['HTTPHeaders']['x-amz-bucket-region']
+        for record in page['Contents']:
+            logger.debug(record)
+            event_handler.on_any_event(region, args.bucket_name, record)

@@ -2,8 +2,9 @@ from kafka import KafkaProducer
 import json
 import boto3
 import argparse
-
 import logging
+import urllib
+
 logger = logging.getLogger('sqs_observer')
 logger.setLevel(logging.DEBUG)
 ch = logging.StreamHandler()
@@ -19,12 +20,12 @@ logger.addHandler(ch)
 # mainipulate the bucket via
 # AWS_ACCESS_KEY_ID=. AWS_SECRET_ACCESS_KEY=. aws s3 cp text  s3://dos-testing
 
+
 def to_kafka(args, payload):
     """ write dict to kafka """
     producer = KafkaProducer(bootstrap_servers=args.kafka_bootstrap)
-    key = '{}~{}~{}'.format(payload['system_metadata_fields']['event_type'],
-                            payload['system_metadata_fields']['bucket_name'],
-			    payload.get('checksum', None))
+    key = '{}~{}'.format(payload['system_metadata_fields']['event_type'],
+                         payload['urls'][0])
     producer.send(args.kafka_topic, key=key, value=json.dumps(payload))
     producer.flush()
     logger.debug('sent to kafka topic: {}'.format(args.kafka_topic))
@@ -50,8 +51,14 @@ def process(args, message):
             s3["bucket"]["ownerIdentity"]["principalId"]
         system_metadata_fields['event_type'] = record["eventName"]
         obj = s3['object']
+        _id = urllib.quote_plus(obj['key'])
+        _urls = ["s3://{}.s3-{}.amazonaws.com/{}".format(
+                  system_metadata_fields['bucket_name'],
+                  record['awsRegion'],
+                  _id
+                  )]
         data_object = {
-          "id": obj['key'],
+          "id": _id,
           "file_size": obj.get('size', None),
           # The time, in ISO-8601,when S3 finished processing the request,
           "created": record['eventTime'],
@@ -60,11 +67,7 @@ def process(args, message):
           # https://forums.aws.amazon.com/thread.jspa?messageID=203436&#203436
           "checksum": obj.get('eTag', None),
           # http://docs.aws.amazon.com/AmazonS3/latest/dev/UsingBucket.html#access-bucket-intro
-          "urls": ["s3://{}.s3-{}.amazonaws.com/{}".format(
-                    system_metadata_fields['bucket_name'],
-                    record['awsRegion'],
-                    obj['key']
-                    )],
+          "urls": _urls,
           "system_metadata_fields": system_metadata_fields
         }
         logger.debug(json.dumps(data_object))
@@ -88,7 +91,7 @@ def consume(args):
                 # Get the custom author message attribute if it was set
                 # Print out the body and author (if set)
                 if process(args, message):
-                    message.delete()                        
+                    message.delete()
         except Exception as e:
             logger.error(e)
 
@@ -113,4 +116,3 @@ if __name__ == '__main__':  # pragma: no cover
     populate_args(argparser)
     args = argparser.parse_args()
     consume(args)
-
