@@ -34,6 +34,18 @@ Read confluent doc  https://docs.confluent.io/current/cp-docker-images/docs/quic
   $bin/init
   ```
 
+  test the services
+  ```
+  $testing/aws-inventory
+  $testing/aws-observer
+  $testing/file-inventory
+  $testing/file-observer
+  $testing/swift-inventory
+  $testing/swift-observer
+  ```
+  ![image](https://user-images.githubusercontent.com/47808/32018643-62b37840-b97f-11e7-9203-0e1c7f41a0be.png)
+
+
   to re-initialize the services
   ```
   $bin/clean
