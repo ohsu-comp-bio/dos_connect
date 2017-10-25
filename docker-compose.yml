@@ -18,6 +18,7 @@ services:
       KAFKA_ZOOKEEPER_CONNECT: localhost:32181
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:29092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_DELETE_TOPIC_ENABLE: "true"
 
   kafka-rest:
     image: confluentinc/cp-kafka-rest:3.3.0

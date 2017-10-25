@@ -15,7 +15,7 @@ import logging
 import time
 import argparse
 from stat import *
-
+import json
 
 logger = logging.getLogger('file_observer')
 
@@ -26,20 +26,20 @@ class KafkaHandler(PatternMatchingEventHandler):
 
     def __init__(self, patterns=None, ignore_patterns=None,
                  ignore_directories=False, case_sensitive=False,
-                 kafka_topic=None, kafka_bootstrap=None):
+                 kafka_topic=None, kafka_bootstrap=None, monitor_directory=None):
         super(KafkaHandler, self).__init__(patterns,
                                            ignore_patterns,
                                            ignore_directories,
                                            case_sensitive)
         self.kafka_topic = kafka_topic
         self.kafka_bootstrap = kafka_bootstrap
+        self.monitor_directory = monitor_directory
         logger.debug(
             'patterns:{} kafka_topic:{} kafka_bootstrap:{}'
             .format(patterns, kafka_topic, kafka_bootstrap))
 
     def on_any_event(self, event):
         try:
-            logger.debug(event)
             self.process(event)
         except Exception as e:
             logger.exception(e)
@@ -47,11 +47,8 @@ class KafkaHandler(PatternMatchingEventHandler):
     def process(self, event):
         if (event.is_directory):
             return
-
-        f = os.stat(event.src_path)
-
-        if not S_ISREG(f.st_mode):
-            return
+        if event.event_type == 'modified':
+	    return
 
         event_methods = {
             'deleted': 'ObjectRemoved:Delete',
@@ -59,22 +56,36 @@ class KafkaHandler(PatternMatchingEventHandler):
             'created': 'ObjectCreated:Put',
             'modified': 'ObjectCreated:Put'
         }
-
-        data_object = {
-          "id": event.src_path,
-          "file_size": f.st_size,
-          # The time, in ISO-8601,when S3 finished processing the request,
-          "created":  datetime.datetime.fromtimestamp(f.st_ctime).isoformat(),
-          "updated":  datetime.datetime.fromtimestamp(f.st_mtime).isoformat(),
-          # TODO multipart ...
-          # https://forums.aws.amazon.com/thread.jspa?messageID=203436&#203436
-          "checksum": self.md5sum(event.src_path),
-          # http://docs.aws.amazon.com/AmazonS3/latest/dev/UsingBucket.html#access-bucket-intro
+        logger.info(str(event))
+        logger.info(event.src_path)
+        logger.info(self.monitor_directory)
+        _id = event.src_path.lstrip(self.monitor_directory)
+        data_object = { 
+          "id": _id,
           "urls": [self.path2url(event.src_path)],
           "system_metadata_fields": {"event_type":
                                      event_methods.get(event.event_type),
-                                     "bucket_name": os.getcwd()}
+                                     "bucket_name": self.monitor_directory }
         }
+
+        if not event.event_type == 'deleted':
+            f = os.stat(event.src_path)
+            if not S_ISREG(f.st_mode):
+                return
+            data_object = {
+              "id": _id,
+              "file_size": f.st_size,
+              # The time, in ISO-8601,when S3 finished processing the request,
+              "created":  datetime.datetime.fromtimestamp(f.st_ctime).isoformat(),
+              "updated":  datetime.datetime.fromtimestamp(f.st_mtime).isoformat(),
+              # TODO multipart ...
+              # https://forums.aws.amazon.com/thread.jspa?messageID=203436&#203436
+              "checksum": self.md5sum(event.src_path),
+              "urls": [self.path2url(event.src_path)],
+              "system_metadata_fields": {"event_type":
+                                         event_methods.get(event.event_type),
+                                         "bucket_name": self.monitor_directory}
+            }
         self.to_kafka(data_object)
 
     def md5sum(self, filename, blocksize=65536):
@@ -94,10 +105,10 @@ class KafkaHandler(PatternMatchingEventHandler):
         producer = KafkaProducer(bootstrap_servers=self.kafka_bootstrap)
         key = '{}~{}~{}'.format(payload['system_metadata_fields']['event_type'],
                                 payload['system_metadata_fields']['bucket_name'],
-    			                payload.get('checksum', None))
+                                payload.get('id', None))
         producer.send(args.kafka_topic, key=key, value=json.dumps(payload))
         producer.flush()
-        logger.debug('sent to kafka topic: {}'.format(self.kafka_topic))
+        logger.debug('sent to kafka: {} {}'.format(self.kafka_topic, key))
 
 
 if __name__ == "__main__":
@@ -154,7 +165,8 @@ if __name__ == "__main__":
         ignore_directories=args.ignore_directories,
         case_sensitive=args.case_sensitive,
         kafka_topic=args.kafka_topic,
-        kafka_bootstrap=args.kafka_bootstrap
+        kafka_bootstrap=args.kafka_bootstrap,
+        monitor_directory=args.monitor_directory
     )
 
     for root, dirs, files in os.walk(path):

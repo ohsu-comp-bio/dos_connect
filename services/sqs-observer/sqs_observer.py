@@ -52,13 +52,13 @@ def process(args, message):
         obj = s3['object']
         data_object = {
           "id": obj['key'],
-          "file_size": obj['size'],
+          "file_size": obj.get('size', None),
           # The time, in ISO-8601,when S3 finished processing the request,
           "created": record['eventTime'],
           "updated": record['eventTime'],
           # TODO multipart ...
           # https://forums.aws.amazon.com/thread.jspa?messageID=203436&#203436
-          "checksum": obj['eTag'],
+          "checksum": obj.get('eTag', None),
           # http://docs.aws.amazon.com/AmazonS3/latest/dev/UsingBucket.html#access-bucket-intro
           "urls": ["s3://{}.s3-{}.amazonaws.com/{}".format(
                     system_metadata_fields['bucket_name'],
