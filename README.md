@@ -4,8 +4,14 @@
 ![image](https://user-images.githubusercontent.com/47808/32019677-d39ac29a-b982-11e7-91f4-64924f6c5bd8.png)
 
 
-* For more, Read [confluent Kafka Single Node](https://docs.confluent.io/current/cp-docker-images/docs/quickstart.html#getting-started-with-docker-compose
-)  
+This project provides two high level capabilities:
+* observation: long lived services to observe the object store and populate a kafka topic with [data-object-schema](https://github.com/ga4gh/data-object-schemas/blob/master/proto/data_objects.proto) records. These observations catch add, moves and deletes to the object store.
+* inventory: on demand commands to capture a snapshot of the object store.  Inventory commands populate the same queue
+
+For development and proof of concept, a docker-compose setup is provided.
+A elastic-sink service is provided to illustrate the consuming from the topic and maintaining a user facing query store.
+
+
 ### setup
   create .env file in the cloned repo
   ```
@@ -39,6 +45,8 @@
   ```
   $bin/init
   ```
+  * For more, Read [confluent Kafka Single Node](https://docs.confluent.io/current/cp-docker-images/docs/quickstart.html#getting-started-with-docker-compose
+  )
 
 ### testing
   * test the services
