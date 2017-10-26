@@ -54,8 +54,13 @@ def process(args, message):
             s3["bucket"]["ownerIdentity"]["principalId"]
         system_metadata['event_type'] = record["eventName"]
         obj = s3['object']
-        head = client.head_object(Bucket=s3['bucket']['name'], Key=obj['key'])
-        user_metadata = head['Metadata'] if ('Metadata' in head) else None
+        
+        user_metadata = {}
+        if not system_metadata['event_type'] == "ObjectRemoved:Delete":
+            head = client.head_object(Bucket=s3['bucket']['name'],
+                                      Key=obj['key'])
+            user_metadata = head['Metadata'] if ('Metadata' in head) else None
+
         _id = urllib.quote_plus(obj['key'])
         _urls = ["s3://{}.s3-{}.amazonaws.com/{}".format(
                   system_metadata['bucket_name'],
