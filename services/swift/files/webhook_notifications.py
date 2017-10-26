@@ -196,9 +196,9 @@ class LoggingNotifier(object):
         fields = ["account", "project_name", "container", "event_type", "object_type",
                   "x-object-meta-mtime", "x-timestamp", "project_domain_name",
                   "x-trans-id", "project_id", "content-type", "project_domain_id"]
-        system_metadata_fields = {}
+        system_metadata = {}
         for field in fields:
-            system_metadata_fields[field] = swift[field]
+            system_metadata[field] = swift[field]
         _id = urllib.quote_plus(swift['object'])
         data_object = {
           "id": _id,
@@ -207,7 +207,7 @@ class LoggingNotifier(object):
           "updated": swift['updated_at'],
           "checksum": swift['etag'],
           "urls": ["swift://{}/{}".format(swift['container'], _id)],
-          "system_metadata_fields": system_metadata_fields
+          "system_metadata": system_metadata
         }
         return data_object
 
@@ -233,7 +233,7 @@ class LoggingNotifier(object):
                 """ write dict to kafka """
                 producer = KafkaProducer(bootstrap_servers=kafka_bootstrap)
                 payload = self.to_data_object(payload)
-                key = '{}~{}'.format(payload['system_metadata_fields']['event_type'],
+                key = '{}~{}'.format(payload['system_metadata']['event_type'],
                                      payload['urls'][0])
                 producer.send(kafka_topic, key=key, value=json.dumps(payload))
                 producer.flush()

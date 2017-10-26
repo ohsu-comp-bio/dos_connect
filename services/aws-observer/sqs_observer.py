@@ -24,7 +24,7 @@ logger.addHandler(ch)
 def to_kafka(args, payload):
     """ write dict to kafka """
     producer = KafkaProducer(bootstrap_servers=args.kafka_bootstrap)
-    key = '{}~{}'.format(payload['system_metadata_fields']['event_type'],
+    key = '{}~{}'.format(payload['system_metadata']['event_type'],
                          payload['urls'][0])
     producer.send(args.kafka_topic, key=key, value=json.dumps(payload))
     producer.flush()
@@ -38,22 +38,27 @@ def process(args, message):
     logger.debug(message.body)
     sqs_json = message.body
     sqs = json.loads(sqs_json)
+    # we need a call to s3 to fetch metadata not in queue message
+    client = boto3.client('s3')
+
     if 'Records' not in sqs:
         return True
     for record in sqs['Records']:
         if not record['eventSource'] == "aws:s3":
             continue
-        system_metadata_fields = {}
-        system_metadata_fields['awsRegion'] = record['awsRegion']
+        system_metadata = {}
+        system_metadata['awsRegion'] = record['awsRegion']
         s3 = record['s3']
-        system_metadata_fields['bucket_name'] = s3['bucket']['name']
-        system_metadata_fields['principalId'] = \
+        system_metadata['bucket_name'] = s3['bucket']['name']
+        system_metadata['principalId'] = \
             s3["bucket"]["ownerIdentity"]["principalId"]
-        system_metadata_fields['event_type'] = record["eventName"]
+        system_metadata['event_type'] = record["eventName"]
         obj = s3['object']
+        head = client.head_object(Bucket=s3['bucket']['name'], Key=obj['key'])
+        user_metadata = head['Metadata'] if ('Metadata' in head) else None
         _id = urllib.quote_plus(obj['key'])
         _urls = ["s3://{}.s3-{}.amazonaws.com/{}".format(
-                  system_metadata_fields['bucket_name'],
+                  system_metadata['bucket_name'],
                   record['awsRegion'],
                   _id
                   )]
@@ -68,7 +73,8 @@ def process(args, message):
           "checksum": obj.get('eTag', None),
           # http://docs.aws.amazon.com/AmazonS3/latest/dev/UsingBucket.html#access-bucket-intro
           "urls": _urls,
-          "system_metadata_fields": system_metadata_fields
+          "system_metadata": system_metadata,
+          "user_metadata": user_metadata
         }
         logger.debug(json.dumps(data_object))
         to_kafka(args, data_object)
@@ -76,7 +82,7 @@ def process(args, message):
 
 
 def consume(args):
-    # Get the service resource
+    # Get the service resources
     sqs = boto3.resource('sqs')
 
     # Get the queue. This returns an SQS.Queue instance
