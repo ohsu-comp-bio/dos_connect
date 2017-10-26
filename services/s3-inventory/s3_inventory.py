@@ -63,6 +63,8 @@ class KafkaHandler(object):
         etag = record['ETag']
         if etag.startswith('"') and etag.endswith('"'):
             etag = etag[1:-1]
+        if etag.startswith('%22') and etag.endswith('%22'):
+            etag = etag[3:-3]
         data_object = {
           "id": _id,
           "file_size": record['Size'],

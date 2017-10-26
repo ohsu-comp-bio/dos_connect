@@ -1,6 +1,5 @@
 echo "## Deleting $1" 
 
-# create it if not exists
 docker run \
   --net=host \
   --rm \

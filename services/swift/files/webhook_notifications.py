@@ -198,15 +198,18 @@ class LoggingNotifier(object):
                   "x-trans-id", "project_id", "content-type", "project_domain_id"]
         system_metadata = {}
         for field in fields:
-            system_metadata[field] = swift[field]
-        _id = urllib.quote_plus(swift['object'])
+            system_metadata[field] = swift[field] if field in swift else None
+        _id = swift['object']
+        _id_parts = _id.split('/')
+        _id_parts[-1] = urllib.quote_plus(_id_parts[-1])
+        _id = '/'.join(_id_parts)
         data_object = {
           "id": _id,
           "file_size": swift['content-length'],
           "created": swift['updated_at'],
           "updated": swift['updated_at'],
           "checksum": swift['etag'],
-          "urls": ["swift://{}/{}".format(swift['container'], _id)],
+          "urls": ["s3://{}/{}".format(swift['container'], _id)],
           "system_metadata": system_metadata
         }
         return data_object
@@ -237,7 +240,7 @@ class LoggingNotifier(object):
                                      payload['urls'][0])
                 producer.send(kafka_topic, key=key, value=json.dumps(payload))
                 producer.flush()
-                logger.debug('sent to kafka topic: {}'.format(kafka_topic))
+                self.logger.debug('sent to kafka topic: {}'.format(kafka_topic))
 
         except Exception as e:
             self.logger.exception(e)

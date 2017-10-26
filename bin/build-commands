@@ -1,7 +1,3 @@
 #!/bin/bash
-pushd services/file-observer/
-docker build -t file-inventory .
-popd
-pushd services/s3-inventory/
-docker build -t s3-inventory .
-popd
+pushd services/file-observer/ ; docker build -t file-inventory . ; popd
+pushd services/s3-inventory/ ; docker build -t s3-inventory . ; popd
