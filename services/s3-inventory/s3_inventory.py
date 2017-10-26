@@ -59,6 +59,9 @@ class KafkaHandler(object):
             "event_type": _event_type,
             "bucket_name": bucket_name
         }
+        etag = record['ETag']
+        if etag.startswith('"') and etag.endswith('"'):
+            etag = etag[1:-1]
         data_object = {
           "id": _id,
           "file_size": record['Size'],
@@ -67,7 +70,7 @@ class KafkaHandler(object):
           "updated":  record['LastModified'].isoformat(),
           # TODO multipart ...
           # https://forums.aws.amazon.com/thread.jspa?messageID=203436&#203436
-          "checksum": record['ETag'],
+          "checksum": etag, 
           "urls": [_url],
           "system_metadata_fields": _system_metadata_fields
         }
