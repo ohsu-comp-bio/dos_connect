@@ -59,6 +59,7 @@ services:
     environment:
       # TODO do env subsitute
       # coordinate with services/swift/files/proxy-server.conf
+      # See https://docs.docker.com/samples/library/nginx/#using-environment-variables-in-nginx-configuration
       - http.host=0.0.0.0
       - KAFKA_TOPIC=${KAFKA_DOS_TOPIC}
       - KAFKA_BOOTSTRAP=${KAFKA_BOOTSTRAP_SERVERS}
