@@ -110,7 +110,7 @@ class WebHookContext(wsgi.WSGIContext):
             'DELETE': 'ObjectRemoved:Delete',
             'COPY': 'ObjectCreated:Copy',
             'PUT': 'ObjectCreated:Put',
-            'POST': 'metadata'
+            'POST': 'ObjectMetadata'
         }
 
         event_object = ('object' if obj
@@ -190,15 +190,21 @@ class LoggingNotifier(object):
         self.conf = conf
 
     def to_data_object(self, swift):
+        self.logger.warn(swift)
         """ covert to data object """
         fields = ["account", "project_name", "container", "event_type", "object_type",
                   "x-object-meta-mtime", "x-timestamp", "project_domain_name",
                   "x-trans-id", "project_id", "content-type", "project_domain_id"]
         system_metadata = {}
-
         for field in fields:
             if field in swift:
                 system_metadata[field] = swift[field]
+
+        user_metadata = {}
+        for field in swift.keys():
+	    if field.startswith('x-object-meta-'):
+		user_metadata[field.replace('x-object-meta-','')] = swift[field]
+
         _id = swift['object']
         _id_parts = _id.split('/')
         _id_parts[-1] = urllib.quote_plus(_id_parts[-1])
@@ -207,11 +213,12 @@ class LoggingNotifier(object):
         _url = "s3://{}/{}/{}".format(socket.gethostname(),
                                       swift['container'], _id)
 
-        if swift['event_type'] == 'ObjectRemoved:Delete':
+        if swift['event_type'] == 'ObjectRemoved:Delete' or swift['event_type'] == 'ObjectMetadata':
             data_object = {
               "id": _id,
               "urls": [_url],
-              "system_metadata": system_metadata
+              "system_metadata": system_metadata,
+              "user_metadata": user_metadata
             }
         else:
             data_object = {
@@ -221,7 +228,8 @@ class LoggingNotifier(object):
               "updated": swift['updated_at'],
               "checksum": swift['etag'],
               "urls": [_url],
-              "system_metadata": system_metadata
+              "system_metadata": system_metadata,
+              "user_metadata": user_metadata
             }
         return data_object
 
