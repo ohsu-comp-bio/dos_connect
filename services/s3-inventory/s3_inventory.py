@@ -28,13 +28,14 @@ class KafkaHandler(object):
             'kafka_topic:{} kafka_bootstrap:{}'
             .format(kafka_topic, kafka_bootstrap))
 
-    def on_any_event(self, endpoint_url, region, bucket_name, record):
+    def on_any_event(self, endpoint_url, region, bucket_name, record,
+                     metadata):
         try:
-            self.process(endpoint_url, region, bucket_name, record)
+            self.process(endpoint_url, region, bucket_name, record, metadata)
         except Exception as e:
             logger.exception(e)
 
-    def process(self, endpoint_url, region, bucket_name, record):
+    def process(self, endpoint_url, region, bucket_name, record, metadata):
         """
         {u'LastModified':
             datetime.datetime(2017, 10, 23, 16, 20, 45, tzinfo=tzutc()),
@@ -54,11 +55,16 @@ class KafkaHandler(object):
         if endpoint_url:
             parsed = urlparse(endpoint_url)
             _url = 's3://{}/{}/{}'.format(parsed.netloc, bucket_name,  _id)
-        _system_metadata_fields = {
+        _system_metadata = {
             'StorageClass': record['StorageClass'],
             "event_type": _event_type,
             "bucket_name": bucket_name
         }
+        etag = record['ETag']
+        if etag.startswith('"') and etag.endswith('"'):
+            etag = etag[1:-1]
+        if etag.startswith('%22') and etag.endswith('%22'):
+            etag = etag[3:-3]
         data_object = {
           "id": _id,
           "file_size": record['Size'],
@@ -67,15 +73,16 @@ class KafkaHandler(object):
           "updated":  record['LastModified'].isoformat(),
           # TODO multipart ...
           # https://forums.aws.amazon.com/thread.jspa?messageID=203436&#203436
-          "checksum": record['ETag'],
+          "checksum": etag, 
           "urls": [_url],
-          "system_metadata_fields": _system_metadata_fields
+          "system_metadata": _system_metadata,
+          "user_metadata": metadata,
         }
         self.to_kafka(data_object)
 
     def to_kafka(self, payload):
         """ write dict to kafka """
-        key = '{}~{}'.format(payload['system_metadata_fields']['event_type'],
+        key = '{}~{}'.format(payload['system_metadata']['event_type'],
                              payload['urls'][0])
         if self.dry_run:
             logger.debug(key)
@@ -106,7 +113,7 @@ if __name__ == "__main__":
                            action='store_true')
 
     argparser.add_argument('--endpoint_url', '-ep',
-                           help='''for swift, ceph and other non-aws endpoints''',
+                           help='''for swift, ceph, other non-aws endpoints''',
                            default=None)
 
     argparser.add_argument('bucket_name',
@@ -126,8 +133,6 @@ if __name__ == "__main__":
         dry_run=args.dry_run,
     )
 
-    # boto3.client('s3', 'us-west-2', config=Config(s3={'addressing_style': 'path'}))
-
     # support non aws hosts
     if args.endpoint_url:
         use_ssl = True
@@ -135,7 +140,8 @@ if __name__ == "__main__":
             use_ssl = False
         client = boto3.client(
             's3', endpoint_url=args.endpoint_url, use_ssl=use_ssl,
-            config=Config(s3={'addressing_style': 'path'}, signature_version='s3')
+            config=Config(s3={'addressing_style': 'path'},
+                          signature_version='s3')
         )
     else:
         client = boto3.client('s3')
@@ -148,4 +154,8 @@ if __name__ == "__main__":
             region = page['ResponseMetadata']['HTTPHeaders']['x-amz-bucket-region']
         for record in page['Contents']:
             logger.debug(record)
-            event_handler.on_any_event(args.endpoint_url, region, args.bucket_name, record)
+            head = client.head_object(Bucket=args.bucket_name,
+                                      Key=record['Key'])
+            metadata = head['Metadata'] if ('Metadata' in head) else None
+            event_handler.on_any_event(args.endpoint_url, region,
+                                       args.bucket_name, record, metadata)
