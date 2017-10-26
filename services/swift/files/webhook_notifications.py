@@ -1,8 +1,6 @@
 """
 This middleware emits webhook notifications following successful
-object creation, deletion, copy or metadata operations.  In its current
-incarnation it also requires middleware that will identify a tenant to which
-the request refers, but that could be changed.
+object creation, deletion, copy or metadata operations.
 
 The notification payload is dependent on the type of event, but always
 includes project_id, container, obj. For events other than deletion,
@@ -40,7 +38,7 @@ import requests
 import json
 from kafka import KafkaProducer
 import urllib
-
+import socket
 
 class WebHookContext(wsgi.WSGIContext):
     def __init__(self, app, notifier):
@@ -197,21 +195,34 @@ class LoggingNotifier(object):
                   "x-object-meta-mtime", "x-timestamp", "project_domain_name",
                   "x-trans-id", "project_id", "content-type", "project_domain_id"]
         system_metadata = {}
+
         for field in fields:
-            system_metadata[field] = swift[field] if field in swift else None
+            if field in swift:
+                system_metadata[field] = swift[field]
         _id = swift['object']
         _id_parts = _id.split('/')
         _id_parts[-1] = urllib.quote_plus(_id_parts[-1])
         _id = '/'.join(_id_parts)
-        data_object = {
-          "id": _id,
-          "file_size": swift['content-length'],
-          "created": swift['updated_at'],
-          "updated": swift['updated_at'],
-          "checksum": swift['etag'],
-          "urls": ["s3://{}/{}".format(swift['container'], _id)],
-          "system_metadata": system_metadata
-        }
+
+        _url = "s3://{}/{}/{}".format(socket.gethostname(),
+                                      swift['container'], _id)
+
+        if swift['event_type'] == 'ObjectRemoved:Delete':
+            data_object = {
+              "id": _id,
+              "urls": [_url],
+              "system_metadata": system_metadata
+            }
+        else:
+            data_object = {
+              "id": _id,
+              "file_size": swift['content-length'],
+              "created": swift['updated_at'],
+              "updated": swift['updated_at'],
+              "checksum": swift['etag'],
+              "urls": [_url],
+              "system_metadata": system_metadata
+            }
         return data_object
 
     def notify(self, obj, event_type, payload):
