@@ -110,7 +110,7 @@ class WebHookContext(wsgi.WSGIContext):
             'DELETE': 'ObjectRemoved:Delete',
             'COPY': 'ObjectCreated:Copy',
             'PUT': 'ObjectCreated:Put',
-            'POST': 'ObjectMetadata'
+            'POST': 'ObjectModified'
         }
 
         event_object = ('object' if obj
