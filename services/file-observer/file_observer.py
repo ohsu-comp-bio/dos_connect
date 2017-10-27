@@ -157,14 +157,15 @@ if __name__ == "__main__":
                            default=False,
                            action='store_true')
 
+    argparser.add_argument('--polling_interval','-pi',
+                           help='interval in seconds between polling '
+                                'the file system',
+                           default=60)
+
     argparser.add_argument('monitor_directory',
                            help='''directory to monitor''',
                            default='.')
 
-    argparser.add_argument('polling_interval',
-                           help='interval in seconds between polling '
-                                'the file system',
-                           default=60)
 
     args = argparser.parse_args()
 
