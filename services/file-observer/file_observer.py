@@ -4,7 +4,7 @@ import sys
 from string import Template
 from watchdog.events import PatternMatchingEventHandler, FileCreatedEvent
 from watchdog.events import DirCreatedEvent
-from watchdog.observers import Observer
+from watchdog.observers.polling import PollingObserver
 import hashlib
 import datetime
 import urlparse
@@ -51,14 +51,12 @@ class KafkaHandler(PatternMatchingEventHandler):
     def process(self, event):
         if (event.is_directory):
             return
-        if event.event_type == 'modified':
-            return
 
         event_methods = {
             'deleted': 'ObjectRemoved:Delete',
             'moved': 'ObjectCreated:Copy',
             'created': 'ObjectCreated:Put',
-            'modified': 'ObjectCreated:Put'
+            'modified': 'ObjectModified'
         }
         _id = re.sub(r'^' + self.monitor_directory + '/', '', event.src_path)
         _id = urllib.quote_plus(_id)
@@ -163,6 +161,11 @@ if __name__ == "__main__":
                            help='''directory to monitor''',
                            default='.')
 
+    argparser.add_argument('polling_interval',
+                           help='interval in seconds between polling '
+                                'the file system',
+                           default=60)
+
     args = argparser.parse_args()
 
     logger.setLevel(logging.DEBUG)
@@ -194,7 +197,7 @@ if __name__ == "__main__":
                         os.path.join(root, name)))
     else:
         logger.debug("observing {}".format(path))
-        observer = Observer()
+        observer = PollingObserver(args.polling_interval)
         observer.schedule(event_handler, path, recursive=True)
         observer.start()
         try:
