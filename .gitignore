@@ -9,6 +9,9 @@ __pycache__/
 # mac
 .DS_Store
 
+# google storage auth 
+google-auth-dos-testing.json
+
 # docker volumes
 volumes/
 

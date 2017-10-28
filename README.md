@@ -71,3 +71,6 @@ A elastic-sink service is provided to illustrate the consuming from the topic an
   ```
   $bin/clean
   ```
+
+### TODO
+  Observe azure ... 
