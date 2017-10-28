@@ -11,6 +11,7 @@ __pycache__/
 
 # google storage auth 
 google-auth-dos-testing.json
+google-auth.json
 
 # docker volumes
 volumes/
