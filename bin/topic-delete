@@ -4,5 +4,5 @@ docker run \
   --net=host \
   --rm \
   confluentinc/cp-kafka:3.3.0 \
-  kafka-topics --delete --topic $1 --if-exists --zookeeper localhost:32181 
+  kafka-topics --delete --topic $1 --if-exists --zookeeper $KAFKA_ZOOKEEPER_CONNECT
 

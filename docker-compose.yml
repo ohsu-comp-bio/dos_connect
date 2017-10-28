@@ -80,6 +80,21 @@ services:
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
 
+  # user service: monitor aws SQS queue
+  google-observer:
+    build:
+      context: services/google-observer
+    depends_on:
+      - zookeeper
+      - kafka
+    network_mode: host
+    environment:
+      - KAFKA_TOPIC=${KAFKA_DOS_TOPIC}
+      - KAFKA_BOOTSTRAP=${KAFKA_BOOTSTRAP_SERVERS}
+      - PUBSUB_QUEUE_NAME=${PUBSUB_QUEUE_NAME}
+
+
+
   # user service: monitor file system
   file-observer:
     build:

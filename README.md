@@ -1,7 +1,7 @@
 
 ## DOS events
 
-![image](https://user-images.githubusercontent.com/47808/32019677-d39ac29a-b982-11e7-91f4-64924f6c5bd8.png)
+![image](https://user-images.githubusercontent.com/47808/32138741-268ef8ba-bbed-11e7-97dd-af7108d6b477.png)
 
 
 This project provides two high level capabilities:
@@ -71,3 +71,6 @@ A elastic-sink service is provided to illustrate the consuming from the topic an
   ```
   $bin/clean
   ```
+
+### TODO
+  Observe azure ... 

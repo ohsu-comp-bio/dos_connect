@@ -1,0 +1,3 @@
+echo 'testing'  > /tmp/testing.txt
+GOOGLE_APPLICATION_CREDENTIALS=./google-auth.json gsutil  -h x-goog-meta-foo=bar cp /tmp/testing.txt gs://$GS_TEST_BUCKET
+GOOGLE_APPLICATION_CREDENTIALS=./google-auth.json gsutil  rm gs://$GS_TEST_BUCKET/testing.txt
