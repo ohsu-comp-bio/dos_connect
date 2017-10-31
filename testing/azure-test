@@ -1,0 +1,161 @@
+#!/bin/bash
+# A simple Azure Storage example script
+
+export AZURE_STORAGE_ACCOUNT=dostesting
+export AZURE_STORAGE_ACCESS_KEY=nNeYCsLfQ4ZpiL7K87l1QeyrvJO+h7FkyIPFTRXXWk1QigFaFYEr6WC3H6HKZT2Istie0XnArFlxi+rPJz5CRg==
+
+echo 'testing' > /tmp/testing.txt
+export container_name=dos-testing
+export blob_name=dos-testing
+export file_to_upload=/tmp/testing.txt
+export destination_file=testing.txt
+
+echo "Creating the container... $container_name"
+az storage container create --name $container_name
+
+echo "Uploading the file..."
+az storage blob upload --container-name $container_name --file $file_to_upload --name $blob_name
+
+echo "Listing the blobs..."
+az storage blob list --container-name $container_name --output table
+
+echo "Downloading the file..."
+az storage blob download --container-name $container_name --name $blob_name --file $destination_file --output table
+
+echo "Done"
+exit 0
+
+DefaultEndpointsProtocol=https;AccountName=dostesting;AccountKey=nNeYCsLfQ4ZpiL7K87l1QeyrvJO+h7FkyIPFTRXXWk1QigFaFYEr6WC3H6HKZT2Istie0XnArFlxi+rPJz5CRg==;EndpointSuffix=core.windows.net
+nNeYCsLfQ4ZpiL7K87l1QeyrvJO+h7FkyIPFTRXXWk1QigFaFYEr6WC3H6HKZT2Istie0XnArFlxi+rPJz5CRg==
+
+# setup
+export AZURE_STORAGE_ACCOUNT=dostesting
+export AZURE_STORAGE_ACCESS_KEY=nNeYCsLfQ4ZpiL7K87l1QeyrvJO+h7FkyIPFTRXXWk1QigFaFYEr6WC3H6HKZT2Istie0XnArFlxi+rPJz5CRg==
+
+
+# inventory
+from azure.storage.blob import BlockBlobService
+import os
+import jsonpickle
+
+block_blob_service = BlockBlobService(account_name=os.environ.get('AZURE_STORAGE_ACCOUNT'), account_key=os.environ.get('AZURE_STORAGE_ACCESS_KEY'))
+for container in block_blob_service.list_containers():
+  print container.name
+  for blob in block_blob_service.list_blobs(container.name):
+    blob_properties = block_blob_service.get_blob_properties(container.name, blob.name)
+    print jsonpickle.encode(blob_properties)
+
+    >>> blob.__dict__
+    {'content': None, 'metadata': None, 'snapshot': None, 'name': 'dos-testing', 'properties': <azure.storage.blob.models.BlobProperties object at 0x10a30b790>}
+    >>> blob.properties.__dict__
+    {'content_length': 8, 'server_encrypted': True, 'blob_type': 'BlockBlob', 'append_blob_committed_block_count': None, 'last_modified': datetime.datetime(2017, 10, 30, 4, 30, 56, tzinfo=tzutc()), 'content_range': None, 'etag': '0x8D51F4F03C0287B', 'page_blob_sequence_number': None, 'content_settings': <azure.storage.blob.models.ContentSettings object at 0x10a30b690>, 'copy': <azure.storage.blob.models.CopyProperties object at 0x10a30bb90>, 'lease': <azure.storage.blob.models.LeaseProperties object at 0x10a30bad0>}
+
+
+
+
+
+export AZURE_STORAGE_ACCOUNT=dostesting
+export AZURE_STORAGE_ACCESS_KEY=TAz4Ykz0EgIlLhhoEL/ur2OcSeythWxKYYyinkSArAxRcWakGbw7lBr5JsfUKvNHHhF1OKNlYYpP+XVR/Btl/A==
+
+
+# observe
+
+https://docs.microsoft.com/en-us/azure/storage/blobs/storage-blob-event-overview
+
+DefaultEndpointsProtocol=https;AccountName=dostesting2;AccountKey=1zJbEZOYGe+zB08qe1t6w0JkwoWanzq1uT1esn3lZQ3BFpuv3eJPnIvWHAQtoFz3QwpZse5oRoTsJ4dAFwxcaw==;EndpointSuffix=core.windows.net
+1zJbEZOYGe+zB08qe1t6w0JkwoWanzq1uT1esn3lZQ3BFpuv3eJPnIvWHAQtoFz3QwpZse5oRoTsJ4dAFwxcaw==
+export AZURE_STORAGE_ACCOUNT=dostesting2
+export AZURE_STORAGE_ACCESS_KEY=1zJbEZOYGe+zB08qe1t6w0JkwoWanzq1uT1esn3lZQ3BFpuv3eJPnIvWHAQtoFz3QwpZse5oRoTsJ4dAFwxcaw==
+
+
+# setup
+# use storage account to setup queue
+
+az group create --name dostesting --location westcentralus
+
+az storage account create \
+  --name dostesting \
+  --location westcentralus \
+  --resource-group dostesting \
+  --sku Standard_LRS \
+  --kind BlobStorage \
+  --access-tier Hot
+
+az storage account create \
+  --name dostestingq \
+  --location westcentralus \
+  --resource-group dostesting \
+  --sku Standard_LRS \
+  --kind Storage
+
+az storage queue create --name  dostestingq \
+  --account-name dostestingq
+
+# --endpoint Azure ResourceID of the event hub.
+
+
+az eventgrid resource event-subscription create   \
+  --name dos-testing \
+  --endpoint https://dostestingq.queue.core.windows.net/dostestingq/  \
+  --endpoint-type eventhub
+  --provider-namespace Microsoft.Storage \
+  --resource-type storageAccounts \
+  --resource-group dostesting \
+  --resource-name dostesting
+
+
+
+
+  JavaScript HTTP trigger function processed a request. { originalUrl: 'https://dostestingwebhook.azurewebsites.net/api/HttpTriggerJS1?code=zdWU9sGaDCkZO1l4Wali1Epp3EVgg40t32KLiY6vj/60hFN42eGu/A==',
+    method: 'POST',
+    query: { code: 'zdWU9sGaDCkZO1l4Wali1Epp3EVgg40t32KLiY6vj/60hFN42eGu/A==' },
+    headers:
+     { connection: 'Keep-Alive',
+       host: 'dostestingwebhook.azurewebsites.net',
+       'max-forwards': '10',
+       'aeg-subscription-name': '/DOSTESTING',
+       'aeg-delivery-count': '0',
+       'aeg-event-type': 'Notification',
+       'x-waws-unencoded-url': '/api/HttpTriggerJS1?code=zdWU9sGaDCkZO1l4Wali1Epp3EVgg40t32KLiY6vj/60hFN42eGu/A==',
+       'x-original-url': '/api/HttpTriggerJS1?code=zdWU9sGaDCkZO1l4Wali1Epp3EVgg40t32KLiY6vj/60hFN42eGu/A==',
+       'x-arr-log-id': '75a3985f-9dd8-46f9-baf0-11c2d538815b',
+       'disguised-host': 'dostestingwebhook.azurewebsites.net',
+       'x-site-deployment-id': 'dostestingwebhook',
+       'was-default-hostname': 'dostestingwebhook.azurewebsites.net',
+       'x-forwarded-for': '13.78.181.167:6656',
+       'x-arr-ssl': '2048|256|C=US, S=Washington, L=Redmond, O=Microsoft Corporation, OU=Microsoft IT, CN=Microsoft IT SSL SHA2|CN=*.azurewebsites.net',
+       'x-forwarded-proto': 'https',
+       'content-length': '773',
+       'content-type': 'application/json; charset=utf-8' },
+    body:
+     [ { topic: '/subscriptions/68106052-6b47-46b3-bd47-0cd668b9b500/resourceGroups/dostesting/providers/Microsoft.Storage/storageAccounts/dostesting',
+         subject: '/blobServices/default/containers/dos-testing/blobs/testing.txt',
+         eventType: 'Microsoft.Storage.BlobDeleted',
+         eventTime: 2017-10-30T20:51:13.192Z,
+         id: '0424f9e0-001e-0043-3ec0-519288062037',
+         data: [Object] } ],
+    params: {},
+    rawBody: '[{\r\n  "topic": "/subscriptions/68106052-6b47-46b3-bd47-0cd668b9b500/resourceGroups/dostesting/providers/Microsoft.Storage/storageAccounts/dostesting",\r\n  "subject": "/blobServices/default/containers/dos-testing/blobs/testing.txt",\r\n  "event…
+
+
+
+DATE=`date '+%Y%m%d%H%M%S'` az storage blob upload -f /tmp/testing.txt -c dos-testing -n testing-$DATE.txt --metadata foo=bar ;   az storage blob delete -c dos-testing -n testing-$DATE.txt
+
+
+
+DATE=`date '+%Y%m%d%H%M%S'`
+AZURE_STORAGE_ACCOUNT=dostesting \
+AZURE_STORAGE_ACCESS_KEY=TAz4Ykz0EgIlLhhoEL/ur2OcSeythWxKYYyinkSArAxRcWakGbw7lBr5JsfUKvNHHhF1OKNlYYpP+XVR/Btl/A== \
+  az storage blob upload -f /tmp/testing.txt -c dos-testing -n testing-$DATE.txt --metadata foo=bar ;
+sleep 5
+AZURE_STORAGE_ACCOUNT=dostesting \
+AZURE_STORAGE_ACCESS_KEY=TAz4Ykz0EgIlLhhoEL/ur2OcSeythWxKYYyinkSArAxRcWakGbw7lBr5JsfUKvNHHhF1OKNlYYpP+XVR/Btl/A== \
+  az storage blob delete -c dos-testing -n testing-$DATE.txt
+echo testing-$DATE.txt
+
+
+QUEUE_STORAGE_ACCOUNT=dostestingq \
+  QUEUE_STORAGE_ACCESS_KEY=Q85J1MXqLl2i3UlacF+xOih7AG7jAhHqeTX8bC+g+9PZkdWwoepKNTwhgcH7qgAs2scRMIwccE0lZxFG1QuLfQ== \
+  BLOB_STORAGE_ACCOUNT=dostesting \
+  BLOB_STORAGE_ACCESS_KEY=TAz4Ykz0EgIlLhhoEL/ur2OcSeythWxKYYyinkSArAxRcWakGbw7lBr5JsfUKvNHHhF1OKNlYYpP+XVR/Btl/A== \
+  python azure_observer.py  -d

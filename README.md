@@ -38,7 +38,7 @@ A elastic-sink service is provided to illustrate the consuming from the topic an
 
   source the .env file
   ```
-  $export  $(cat ~/kafka-connect/.env | xargs )
+  $ export  $(cat ~/kafka-connect/.env | grep -v "#" | xargs )
   ```
 
   initialize the services
@@ -73,4 +73,4 @@ A elastic-sink service is provided to illustrate the consuming from the topic an
   ```
 
 ### TODO
-  Observe azure ... 
+  Observe azure ...
