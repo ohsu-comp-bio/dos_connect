@@ -17,7 +17,6 @@ import argparse
 from stat import *
 import json
 import re
-import urllib
 
 logger = logging.getLogger('file_observer')
 
@@ -59,7 +58,6 @@ class KafkaHandler(PatternMatchingEventHandler):
             'modified': 'ObjectModified'
         }
         _id = re.sub(r'^' + self.monitor_directory + '/', '', event.src_path)
-        _id = urllib.quote_plus(_id)
 
         event.src_path.lstrip(self.monitor_directory)
         data_object = {
@@ -67,19 +65,21 @@ class KafkaHandler(PatternMatchingEventHandler):
           "urls": [self.path2url(event.src_path)],
           "system_metadata_fields": {"event_type":
                                      event_methods.get(event.event_type),
-                                     "bucket_name": self.monitor_directory }
+                                     "bucket_name": self.monitor_directory}
         }
 
         if not event.event_type == 'deleted':
             f = os.stat(event.src_path)
             if not S_ISREG(f.st_mode):
                 return
+            ctime = datetime.datetime.fromtimestamp(f.st_ctime).isoformat()
+            mtime = datetime.datetime.fromtimestamp(f.st_mtime).isoformat()
             data_object = {
               "id": _id,
               "file_size": f.st_size,
               # The time, in ISO-8601,when S3 finished processing the request,
-              "created":  datetime.datetime.fromtimestamp(f.st_ctime).isoformat(),
-              "updated":  datetime.datetime.fromtimestamp(f.st_mtime).isoformat(),
+              "created":  ctime,
+              "updated":  mtime,
               # TODO multipart ...
               # https://forums.aws.amazon.com/thread.jspa?messageID=203436&#203436
               "checksum": self.md5sum(event.src_path),
@@ -90,9 +90,17 @@ class KafkaHandler(PatternMatchingEventHandler):
             }
         self.to_kafka(data_object)
 
-    def md5sum(self, filename, blocksize=65536):
+    def md5sum(self, full_path, blocksize=65536, md5filename='md5sum.txt'):
+        """ lookup md5 in local file, or compute it on the fly """
+        md5filename = os.path.join(os.path.dirname(full_path), md5filename)
+        if os.path.isfile(md5filename):
+            hashes = open(md5filename).read().split()
+            hashes = dict(zip(hashes[1::2], hashes[0::2]))
+            basename = os.path.basename(full_path)
+            if basename in hashes:
+                return hashes[basename]
         hash = hashlib.md5()
-        with open(filename, "rb") as f:
+        with open(full_path, "rb") as f:
             for block in iter(lambda: f.read(blocksize), b""):
                 hash.update(block)
         return hash.hexdigest()
@@ -157,7 +165,7 @@ if __name__ == "__main__":
                            default=False,
                            action='store_true')
 
-    argparser.add_argument('--polling_interval','-pi',
+    argparser.add_argument('--polling_interval', '-pi',
                            help='interval in seconds between polling '
                                 'the file system',
                            default=60)
@@ -165,7 +173,6 @@ if __name__ == "__main__":
     argparser.add_argument('monitor_directory',
                            help='''directory to monitor''',
                            default='.')
-
 
     args = argparser.parse_args()
 
@@ -193,7 +200,13 @@ if __name__ == "__main__":
                     event_handler.on_any_event(DirCreatedEvent(
                         os.path.join(root, name)))
             for name in files:
-                logger.debug
+                if args.ignore_patterns and re.search(args.ignore_patterns,
+                                                      os.path.join(root, name)
+                                                      ):
+                    continue
+                if args.patterns and not re.search(args.patterns,
+                                                   os.path.join(root, name)):
+                    continue
                 event_handler.on_any_event(FileCreatedEvent(
                         os.path.join(root, name)))
     else:
