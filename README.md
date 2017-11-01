@@ -1,7 +1,7 @@
 
 ## DOS events
 
-![image](https://user-images.githubusercontent.com/47808/32138741-268ef8ba-bbed-11e7-97dd-af7108d6b477.png)
+![image](https://user-images.githubusercontent.com/47808/32254182-63da596e-be5c-11e7-9a6a-4c44c720e25c.png)
 
 
 This project provides two high level capabilities:
@@ -15,25 +15,47 @@ A elastic-sink service is provided to illustrate the consuming from the topic an
 ### setup
   create .env file in the cloned repo
   ```
-  AWS_ACCESS_KEY_ID=XXXXX
-  AWS_SECRET_ACCESS_KEY=XXXXX
-  AWS_DEFAULT_REGION=us-west-2
-  SWIFT_ACCESS_KEY_ID=YYY
-  SWIFT_SECRET_ACCESS_KEY=YYY
-  ZOOKEEPER_CLIENT_PORT=32181
-  KAFKA_ZOOKEEPER_CONNECT=localhost:32181
-  KAFKA_BOOTSTRAP_SERVERS=localhost:29092
-  KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://$KAFKA_BOOTSTRAP_SERVERS
-  KAFKA_REST_ZOOKEEPER_CONNECT=$KAFKA_ZOOKEEPER_CONNECT
+  # common
+  ZOOKEEPER_CLIENT_PORT=2182
+  KAFKA_ZOOKEEPER_CONNECT=XX.XX.XX.XX:2182
+  KAFKA_BOOTSTRAP_SERVERS=XX.XX.XX.XX:9092
+  KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://XX.XX.XX.XX:9092
+  KAFKA_REST_ZOOKEEPER_CONNECT=localhost:2182
   KAFKA_REST_LISTENERS=http://localhost:8082
   KAFKA_REST_HOST_NAME=localhost
   KAFKA_DOS_TOPIC=dos-topic
+
+  # utility
   KAFKA_TOPIC_UI_PORT=8000
-  SQS_QUEUE_NAME=dos-testing
-  SWIFT_PORT=8080
-  AWS_TEST_BUCKET=dos-testing
-  SWIFT_TEST_BUCKET=etl-development
+  ELASTIC_URL=localhost:9200
+
+  # file system
   MONITOR_DIRECTORY=/files
+
+  # swift
+  SWIFT_ACCESS_KEY_ID=XXX
+  SWIFT_SECRET_ACCESS_KEY=XXX
+  SWIFT_PORT=8080
+  SWIFT_TEST_BUCKET=etl-development
+
+  # google
+  PUBSUB_QUEUE_NAME=dos-testing
+  GS_TEST_BUCKET=dos-testing
+
+  # aws
+  AWS_TEST_BUCKET=dos-testing
+  SQS_QUEUE_NAME=dos-testing
+  AWS_ACCESS_KEY_ID=XXX
+  AWS_SECRET_ACCESS_KEY=XXX
+  AWS_DEFAULT_REGION=us-west-2
+
+  # azure
+  QUEUE_STORAGE_ACCOUNT=dostestingq
+  QUEUE_STORAGE_ACCESS_KEY=XXX
+  BLOB_STORAGE_ACCOUNT=dostesting
+  BLOB_STORAGE_ACCESS_KEY=XXX
+  AZURE_TEST_BUCKET=dos-testing
+  AZURE_QUEUE=dos-testing
   ```
 
   source the .env file
@@ -57,6 +79,8 @@ A elastic-sink service is provided to illustrate the consuming from the topic an
   $testing/file-observer
   $testing/swift-inventory
   $testing/swift-observer
+  $testing/azure-observer
+  $testing/azure-inventory
   ```
   * visit hostname:$KAFKA_TOPIC_UI_PORT to see the results
   ![image](https://user-images.githubusercontent.com/47808/32018643-62b37840-b97f-11e7-9203-0e1c7f41a0be.png)

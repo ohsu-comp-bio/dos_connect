@@ -16,7 +16,6 @@ import os
 from urlparse import urlparse
 import sys
 import datetime
-import attr
 
 logger = logging.getLogger('azure-notifications')
 logger.setLevel(logging.DEBUG)
@@ -179,7 +178,6 @@ def consume(args):
                 logger.debug('deleting message {}'.format(message.id))
                 queue_service.delete_message(args.azure_queue,
                                              message.id, message.pop_receipt)
-        logger.debug('waiting {} secs.'.format(args.wait_time))
         time.sleep(args.wait_time)
 
 
