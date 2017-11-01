@@ -5,7 +5,6 @@ from string import Template
 from watchdog.events import PatternMatchingEventHandler, FileCreatedEvent
 from watchdog.events import DirCreatedEvent
 from watchdog.observers.polling import PollingObserver
-import hashlib
 import datetime
 import urlparse
 import urllib
@@ -17,6 +16,7 @@ import argparse
 from stat import *
 import json
 import re
+from file_observer_customizations import md5sum, user_metadata
 
 logger = logging.getLogger('file_observer')
 
@@ -82,28 +82,14 @@ class KafkaHandler(PatternMatchingEventHandler):
               "updated":  mtime,
               # TODO multipart ...
               # https://forums.aws.amazon.com/thread.jspa?messageID=203436&#203436
-              "checksum": self.md5sum(event.src_path),
+              "checksum": md5sum(event.src_path),
               "urls": [self.path2url(event.src_path)],
+              "user_metadata": user_metadata(event.src_path),
               "system_metadata_fields": {"event_type":
                                          event_methods.get(event.event_type),
                                          "bucket_name": self.monitor_directory}
             }
         self.to_kafka(data_object)
-
-    def md5sum(self, full_path, blocksize=65536, md5filename='md5sum.txt'):
-        """ lookup md5 in local file, or compute it on the fly """
-        md5filename = os.path.join(os.path.dirname(full_path), md5filename)
-        if os.path.isfile(md5filename):
-            hashes = open(md5filename).read().split()
-            hashes = dict(zip(hashes[1::2], hashes[0::2]))
-            basename = os.path.basename(full_path)
-            if basename in hashes:
-                return hashes[basename]
-        hash = hashlib.md5()
-        with open(full_path, "rb") as f:
-            for block in iter(lambda: f.read(blocksize), b""):
-                hash.update(block)
-        return hash.hexdigest()
 
     def path2url(self, path):
         return urlparse.urljoin(
