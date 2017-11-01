@@ -94,6 +94,23 @@ services:
       - PUBSUB_QUEUE_NAME=${PUBSUB_QUEUE_NAME}
 
 
+  # user service: monitor azure storage queue
+  azure-observer:
+    build:
+      context: services/azure-observer
+    depends_on:
+      - zookeeper
+      - kafka
+    network_mode: host
+    environment:
+      - KAFKA_TOPIC=${KAFKA_DOS_TOPIC}
+      - KAFKA_BOOTSTRAP=${KAFKA_BOOTSTRAP_SERVERS}
+      - QUEUE_STORAGE_ACCOUNT=${QUEUE_STORAGE_ACCOUNT}
+      - QUEUE_STORAGE_ACCESS_KEY=${QUEUE_STORAGE_ACCESS_KEY}
+      - BLOB_STORAGE_ACCOUNT=${BLOB_STORAGE_ACCOUNT}
+      - BLOB_STORAGE_ACCESS_KEY=${BLOB_STORAGE_ACCESS_KEY}
+      - AZURE_QUEUE=${AZURE_QUEUE}
+
 
   # user service: monitor file system
   file-observer:
@@ -124,7 +141,7 @@ services:
       - KAFKA_TOPIC=${KAFKA_DOS_TOPIC}
       - KAFKA_BOOTSTRAP=${KAFKA_BOOTSTRAP_SERVERS}
       - ELASTIC_URL=${ELASTIC_URL}
-      
+
 
   # Elastic Search
   # note: on docker for mac, you may need to adjust the docker-machines' config
