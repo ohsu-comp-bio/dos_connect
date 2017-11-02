@@ -58,11 +58,11 @@ class KafkaHandler(PatternMatchingEventHandler):
             'modified': 'ObjectModified'
         }
         _id = re.sub(r'^' + self.monitor_directory + '/', '', event.src_path)
-
+        _url = self.path2url(event.src_path)
         event.src_path.lstrip(self.monitor_directory)
         data_object = {
           "id": _id,
-          "urls": [self.path2url(event.src_path)],
+          "urls": [_url],
           "system_metadata_fields": {"event_type":
                                      event_methods.get(event.event_type),
                                      "bucket_name": self.monitor_directory}
@@ -80,10 +80,8 @@ class KafkaHandler(PatternMatchingEventHandler):
               # The time, in ISO-8601,when S3 finished processing the request,
               "created":  ctime,
               "updated":  mtime,
-              # TODO multipart ...
-              # https://forums.aws.amazon.com/thread.jspa?messageID=203436&#203436
-              "checksum": md5sum(event.src_path),
-              "urls": [self.path2url(event.src_path)],
+              "checksum": md5sum(event.src_path, _url),
+              "urls": [_url],
               "user_metadata": user_metadata(event.src_path),
               "system_metadata_fields": {"event_type":
                                          event_methods.get(event.event_type),
