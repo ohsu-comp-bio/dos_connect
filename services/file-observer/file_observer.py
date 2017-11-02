@@ -5,7 +5,6 @@ from string import Template
 from watchdog.events import PatternMatchingEventHandler, FileCreatedEvent
 from watchdog.events import DirCreatedEvent
 from watchdog.observers.polling import PollingObserver
-import hashlib
 import datetime
 import urlparse
 import urllib
@@ -17,7 +16,7 @@ import argparse
 from stat import *
 import json
 import re
-import urllib
+from file_observer_customizations import md5sum, user_metadata
 
 logger = logging.getLogger('file_observer')
 
@@ -59,43 +58,36 @@ class KafkaHandler(PatternMatchingEventHandler):
             'modified': 'ObjectModified'
         }
         _id = re.sub(r'^' + self.monitor_directory + '/', '', event.src_path)
-        _id = urllib.quote_plus(_id)
-
+        _url = self.path2url(event.src_path)
         event.src_path.lstrip(self.monitor_directory)
         data_object = {
           "id": _id,
-          "urls": [self.path2url(event.src_path)],
+          "urls": [_url],
           "system_metadata_fields": {"event_type":
                                      event_methods.get(event.event_type),
-                                     "bucket_name": self.monitor_directory }
+                                     "bucket_name": self.monitor_directory}
         }
 
         if not event.event_type == 'deleted':
             f = os.stat(event.src_path)
             if not S_ISREG(f.st_mode):
                 return
+            ctime = datetime.datetime.fromtimestamp(f.st_ctime).isoformat()
+            mtime = datetime.datetime.fromtimestamp(f.st_mtime).isoformat()
             data_object = {
               "id": _id,
               "file_size": f.st_size,
               # The time, in ISO-8601,when S3 finished processing the request,
-              "created":  datetime.datetime.fromtimestamp(f.st_ctime).isoformat(),
-              "updated":  datetime.datetime.fromtimestamp(f.st_mtime).isoformat(),
-              # TODO multipart ...
-              # https://forums.aws.amazon.com/thread.jspa?messageID=203436&#203436
-              "checksum": self.md5sum(event.src_path),
-              "urls": [self.path2url(event.src_path)],
+              "created":  ctime,
+              "updated":  mtime,
+              "checksum": md5sum(event.src_path, _url),
+              "urls": [_url],
+              "user_metadata": user_metadata(event.src_path),
               "system_metadata_fields": {"event_type":
                                          event_methods.get(event.event_type),
                                          "bucket_name": self.monitor_directory}
             }
         self.to_kafka(data_object)
-
-    def md5sum(self, filename, blocksize=65536):
-        hash = hashlib.md5()
-        with open(filename, "rb") as f:
-            for block in iter(lambda: f.read(blocksize), b""):
-                hash.update(block)
-        return hash.hexdigest()
 
     def path2url(self, path):
         return urlparse.urljoin(
@@ -157,7 +149,7 @@ if __name__ == "__main__":
                            default=False,
                            action='store_true')
 
-    argparser.add_argument('--polling_interval','-pi',
+    argparser.add_argument('--polling_interval', '-pi',
                            help='interval in seconds between polling '
                                 'the file system',
                            default=60)
@@ -165,7 +157,6 @@ if __name__ == "__main__":
     argparser.add_argument('monitor_directory',
                            help='''directory to monitor''',
                            default='.')
-
 
     args = argparser.parse_args()
 
@@ -193,7 +184,13 @@ if __name__ == "__main__":
                     event_handler.on_any_event(DirCreatedEvent(
                         os.path.join(root, name)))
             for name in files:
-                logger.debug
+                if args.ignore_patterns and re.search(args.ignore_patterns,
+                                                      os.path.join(root, name)
+                                                      ):
+                    continue
+                if args.patterns and not re.search(args.patterns,
+                                                   os.path.join(root, name)):
+                    continue
                 event_handler.on_any_event(FileCreatedEvent(
                         os.path.join(root, name)))
     else:

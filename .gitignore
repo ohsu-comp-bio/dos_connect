@@ -9,12 +9,15 @@ __pycache__/
 # mac
 .DS_Store
 
-# google storage auth 
+# google storage auth
 google-auth-dos-testing.json
 google-auth.json
 
 # docker volumes
 volumes/
+
+# test data
+SMMARTData
 
 # Distribution / packaging
 .Python
