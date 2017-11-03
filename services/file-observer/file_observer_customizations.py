@@ -46,8 +46,8 @@ def md5sum(full_path, url, blocksize=65536, md5filename='md5sum.txt'):
         return all_checksums[url]
     hash = hashlib.md5()
     with open(full_path, "rb") as f:
-        print("*** all_checksums {}".format(len(all_checksums.keys())))
-        print("*** url not found in cache {}".format(url))
+        # print("*** all_checksums {}".format(len(all_checksums.keys())))
+        # print("*** url not found in cache {}".format(url))
         print("*** calculating hash for {} {}".format(full_path, orig_path))
         for block in iter(lambda: f.read(blocksize), b""):
             hash.update(block)

@@ -62,10 +62,12 @@ class KafkaHandler(PatternMatchingEventHandler):
         event.src_path.lstrip(self.monitor_directory)
         data_object = {
           "id": _id,
-          "urls": [_url],
-          "system_metadata_fields": {"event_type":
-                                     event_methods.get(event.event_type),
-                                     "bucket_name": self.monitor_directory}
+          "urls": [{
+              'url': _url,
+              "system_metadata": {"event_type":
+                                  event_methods.get(event.event_type),
+                                  "bucket_name": self.monitor_directory}}]
+
         }
 
         if not event.event_type == 'deleted':
@@ -76,16 +78,18 @@ class KafkaHandler(PatternMatchingEventHandler):
             mtime = datetime.datetime.fromtimestamp(f.st_mtime).isoformat()
             data_object = {
               "id": _id,
-              "file_size": f.st_size,
+              "size": f.st_size,
               # The time, in ISO-8601,when S3 finished processing the request,
               "created":  ctime,
               "updated":  mtime,
-              "checksum": md5sum(event.src_path, _url),
-              "urls": [_url],
-              "user_metadata": user_metadata(event.src_path),
-              "system_metadata_fields": {"event_type":
-                                         event_methods.get(event.event_type),
-                                         "bucket_name": self.monitor_directory}
+              "checksums": [{"checksum": md5sum(event.src_path, _url),
+                             'type': 'md5'}],
+              "urls": [{
+                  'url': _url,
+                  "user_metadata": user_metadata(event.src_path),
+                  "system_metadata": {"event_type":
+                                      event_methods.get(event.event_type),
+                                      "bucket_name": self.monitor_directory}}]
             }
         self.to_kafka(data_object)
 
@@ -96,12 +100,14 @@ class KafkaHandler(PatternMatchingEventHandler):
 
     def to_kafka(self, payload):
         """ write dict to kafka """
+        url = payload['urls'][0]
+        key = '{}~{}'.format(url['system_metadata']['event_type'],
+                             url['url'])
         if self.dry_run:
+            logger.debug(key)
             logger.debug(payload)
             return
         producer = KafkaProducer(bootstrap_servers=self.kafka_bootstrap)
-        key = '{}~{}'.format(payload['system_metadata_fields']['event_type'],
-                             payload['urls'][0])
         producer.send(args.kafka_topic, key=key, value=json.dumps(payload))
         producer.flush()
         logger.debug('sent to kafka: {} {}'.format(self.kafka_topic, key))
