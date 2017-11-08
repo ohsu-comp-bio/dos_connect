@@ -6,11 +6,6 @@ import urllib
 from customizations import store, custom_args
 
 
-logger = logging.getLogger('sqs_observer')
-logger.setLevel(logging.DEBUG)
-ch = logging.StreamHandler()
-logger.addHandler(ch)
-
 # Boto3 will check these environment variables for credentials:
 # AWS_ACCESS_KEY_ID The access key for your AWS account.
 # AWS_SECRET_ACCESS_KEY The secret key for your AWS account.
@@ -104,11 +99,19 @@ def populate_args(argparser):
     argparser.add_argument('--sqs_queue_name', '-qn',
                            help='''sqs queue name''',
                            default='dos-testing')
+    argparser.add_argument("-v", "--verbose", help="increase output verbosity",
+                           default=False,
+                           action="store_true")
     custom_args(argsparser)
 
 if __name__ == '__main__':  # pragma: no cover
     argparser = argparse.ArgumentParser(
-        description='Consume events from aws s3, populate kafka')
+        description='Consume events from aws s3, populate store')
     populate_args(argparser)
     args = argparser.parse_args()
+    if args.verbose:
+        logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+    else:
+        logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+    logger = logging.getLogger(__name__)
     consume(args)

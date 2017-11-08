@@ -1,23 +1,24 @@
 from kafka import KafkaProducer
 import logging
+import json
 
 _PRODUCER = None
 
-logger = logging.getLogger()
-
 
 def store(args, payload):
+    logger = logging.getLogger(__name__)
     """ write dict to kafka """
     key = '{}~{}'.format(payload['urls'][0]['system_metadata']['event_type'],
-                         payload['urls'][0])
+                         payload['urls'][0]['url'])
     if not args.dry_run:
         producer = _producer(args)
         producer.send(args.kafka_topic, key=key, value=json.dumps(payload))
         producer.flush()
-        logger.debug('sent to kafka topic: {}'.format(args.kafka_topic))
+        logger.info('sent to kafka topic: {} {}'
+                    .format(args.kafka_topic, key))
     else:
-        logger.debug('dry_run to kafka topic: {} {}'
-                     .format(args.kafka_topic, key))
+        logger.info('dry_run to kafka topic: {} {}'
+                    .format(args.kafka_topic, key))
 
 
 def custom_args(argparser):

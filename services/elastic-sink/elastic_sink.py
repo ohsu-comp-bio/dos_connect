@@ -145,11 +145,18 @@ if __name__ == "__main__":
                            help='client private key pem file',
                            default='/client-certs/key.pem')
 
+    argparser.add_argument("-v", "--verbose", help="increase output verbosity",
+                           default=False,
+                           action="store_true")
+
     args = argparser.parse_args()
-    logger.setLevel(logging.DEBUG)
-    ch = logging.StreamHandler()
-    logger.addHandler(ch)
-    logger.debug(args)
+
+    if args.verbose:
+        logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+    else:
+        logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+
+    logger = logging.getLogger(__name__)
 
     event_handler = ElasticHandler(
         elastic_url=args.elastic_url,

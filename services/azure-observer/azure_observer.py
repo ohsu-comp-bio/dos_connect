@@ -17,11 +17,6 @@ import sys
 import datetime
 from customizations import store, custom_args
 
-logger = logging.getLogger('azure-notifications')
-logger.setLevel(logging.DEBUG)
-ch = logging.StreamHandler()
-logger.addHandler(ch)
-
 
 # Instantiates a storage client
 block_blob_service = BlockBlobService(
@@ -186,6 +181,11 @@ def populate_args(argparser):
                            help='''dry run''',
                            default=False,
                            action='store_true')
+
+    argparser.add_argument("-v", "--verbose", help="increase output verbosity",
+                           default=False,
+                           action="store_true")
+
     custom_args(argsparser)
 
 if __name__ == '__main__':  # pragma: no cover
@@ -193,5 +193,12 @@ if __name__ == '__main__':  # pragma: no cover
         description='Consume events from azure storage queue, populate kafka')
     populate_args(argparser)
     args = argparser.parse_args()
+    if args.verbose:
+        logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+    else:
+        logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+
+    logger = logging.getLogger(__name__)
+
     logger.debug(args)
     consume(args)

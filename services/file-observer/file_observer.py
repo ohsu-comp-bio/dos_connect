@@ -18,8 +18,6 @@ import re
 from file_observer_customizations import md5sum, user_metadata
 from customizations import store, custom_args
 
-logger = logging.getLogger('file_observer')
-
 
 class DOSHandler(PatternMatchingEventHandler):
 
@@ -130,6 +128,10 @@ if __name__ == "__main__":
                                 'the file system',
                            default=60)
 
+    argparser.add_argument("-v", "--verbose", help="increase output verbosity",
+                           default=False,
+                           action="store_true")
+
     argparser.add_argument('monitor_directory',
                            help='''directory to monitor''',
                            default='.')
@@ -138,9 +140,13 @@ if __name__ == "__main__":
 
     args = argparser.parse_args()
 
-    logger.setLevel(logging.DEBUG)
-    ch = logging.StreamHandler()
-    logger.addHandler(ch)
+    if args.verbose:
+        logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+    else:
+        logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+
+    logger = logging.getLogger(__name__)
+
     logger.debug(args)
     path = args.monitor_directory
     event_handler = DOSHandler(args)

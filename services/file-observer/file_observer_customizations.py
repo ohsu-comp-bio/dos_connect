@@ -2,7 +2,10 @@ from kafka import KafkaProducer
 import os
 import hashlib
 import re
+import logging
 from customizations import store, custom_args
+
+logger = logging.getLogger(__name__)
 
 
 """ """
@@ -11,7 +14,7 @@ try:
     all_checksums = open('SMMARTData/all_checksums.tsv').read().split()
     all_checksums = dict(zip(all_checksums[0::2], all_checksums[1::2]))
 except Exception as e:
-    print("**** could not open 'SMMARTData/all_checksums.tsv'", e)
+    logger.warn("**** could not open 'SMMARTData/all_checksums.tsv'")
 
 
 def user_metadata(full_path):
@@ -49,12 +52,12 @@ def md5sum(full_path, url, blocksize=65536, md5filename='md5sum.txt'):
     hash = hashlib.md5()
     try:
         with open(full_path, "rb") as f:
-            print("*** calculating hash for {} {}".format(full_path,
+            logger.info("*** calculating hash for {} {}".format(full_path,
                                                           orig_path))
             for block in iter(lambda: f.read(blocksize), b""):
                 hash.update(block)
         return hash.hexdigest()
     except Exception as e:
-        print("**** could not open {}".format(full_path))
-        print e
+        logger.warn("**** could not open {}".format(full_path))
+        logger.exception(e)
         return None
