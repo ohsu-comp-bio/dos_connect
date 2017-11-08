@@ -1,4 +1,3 @@
-from kafka import KafkaProducer
 from azure.storage.queue import QueueService, QueueMessageFormat
 from azure.storage.blob import BlockBlobService
 from azure.common import AzureException
@@ -16,6 +15,7 @@ import os
 from urlparse import urlparse
 import sys
 import datetime
+from customizations import store, custom_args
 
 logger = logging.getLogger('azure-notifications')
 logger.setLevel(logging.DEBUG)
@@ -30,22 +30,6 @@ block_blob_service = BlockBlobService(
 
 # container info
 containers = {}
-
-
-def to_kafka(args, payload):
-    """ write dict to kafka """
-    key = '{}~{}'.format(payload['system_metadata']['eventType'],
-                         payload['urls'][0])
-
-    if not args.dry_run:
-        producer = KafkaProducer(bootstrap_servers=args.kafka_bootstrap)
-        producer.send(args.kafka_topic, key=key, value=json.dumps(payload))
-        producer.flush()
-        logger.debug('sent to kafka topic: {}  {}'
-                     .format(args.kafka_topic, key))
-    else:
-        logger.debug('dry_run to kafka topic: {} {}'
-                     .format(args.kafka_topic, key))
 
 
 def process(args, message):
@@ -148,9 +132,8 @@ def process(args, message):
           "user_metadata": blob.metadata
         }
 
-
     logger.debug(json.dumps(data_object))
-    to_kafka(args, data_object)
+    store(args, data_object)
     return True
 
 
@@ -203,7 +186,7 @@ def populate_args(argparser):
                            help='''dry run''',
                            default=False,
                            action='store_true')
-
+    custom_args(argsparser)
 
 if __name__ == '__main__':  # pragma: no cover
     argparser = argparse.ArgumentParser(

@@ -9,38 +9,29 @@ import datetime
 import urlparse
 import urllib
 import socket
-from kafka import KafkaProducer
 import logging
 import time
 import argparse
 from stat import *
 import json
 import re
-from file_observer_customizations import md5sum, user_metadata, producer
+from file_observer_customizations import md5sum, user_metadata
+from customizations import store, custom_args
 
 logger = logging.getLogger('file_observer')
 
 
-class KafkaHandler(PatternMatchingEventHandler):
+class DOSHandler(PatternMatchingEventHandler):
 
-    """Creates DOS object on kafka queue in response to matched events."""
+    """Creates DOS object in store in response to matched events."""
 
-    def __init__(self, patterns=None, ignore_patterns=None,
-                 ignore_directories=False, case_sensitive=False,
-                 kafka_topic=None, kafka_bootstrap=None,
-                 dry_run=False, monitor_directory=None):
-        super(KafkaHandler, self).__init__(patterns,
-                                           ignore_patterns,
-                                           ignore_directories,
-                                           case_sensitive)
-        self.kafka_topic = kafka_topic
-        self.kafka_bootstrap = kafka_bootstrap
-        self.monitor_directory = monitor_directory
-        self.dry_run = dry_run
-        self.producer = None
-        logger.debug(
-            'patterns:{} kafka_topic:{} kafka_bootstrap:{}'
-            .format(patterns, kafka_topic, kafka_bootstrap))
+    def __init__(self, args):
+        super(DOSHandler, self).__init__(args.patterns,
+                                         args.ignore_patterns,
+                                         args.ignore_directories,
+                                         args.case_sensitive)
+        self.monitor_directory = args.monitor_directory
+        self.dry_run = args.dry_run
 
     def on_any_event(self, event):
         try:
@@ -92,27 +83,12 @@ class KafkaHandler(PatternMatchingEventHandler):
                                       event_methods.get(event.event_type),
                                       "bucket_name": self.monitor_directory}}]
             }
-        self.to_kafka(data_object)
+        store(args, data_object)
 
     def path2url(self, path):
         return urlparse.urljoin(
           'file://{}'.format(socket.gethostname()),
           urllib.pathname2url(os.path.abspath(path)))
-
-    def to_kafka(self, payload):
-        """ write dict to kafka """
-        url = payload['urls'][0]
-        key = '{}~{}'.format(url['system_metadata']['event_type'],
-                             url['url'])
-        if self.dry_run:
-            logger.debug(key)
-            logger.debug(payload)
-            return
-        if not self.producer:
-      self.producer = producer(bootstrap_servers=self.kafka_bootstrap)
-        self.producer.send(args.kafka_topic, key=key, value=json.dumps(payload))
-        self.producer.flush()
-        logger.debug('sent to kafka: {} {}'.format(self.kafka_topic, key))
 
 
 if __name__ == "__main__":
@@ -121,7 +97,7 @@ if __name__ == "__main__":
     #                     datefmt='%Y-%m-%d %H:%M:%S')
 
     argparser = argparse.ArgumentParser(
-        description='Consume events from directory, populate kafka')
+        description='Consume events from directory, populate store')
 
     argparser.add_argument('--patterns', '-p',
                            help='''patterns to trigger events''',
@@ -138,14 +114,6 @@ if __name__ == "__main__":
     argparser.add_argument('--case_sensitive', '-cs',
                            help='''case_sensitive''',
                            default=False)
-
-    argparser.add_argument('--kafka_topic', '-kt',
-                           help='''kafka_topic''',
-                           default='s3-topic')
-
-    argparser.add_argument('--kafka_bootstrap', '-kb',
-                           help='''kafka host:port''',
-                           default='localhost:9092')
 
     argparser.add_argument('--inventory', '-i',
                            help='''create event for existing files''',
@@ -166,6 +134,8 @@ if __name__ == "__main__":
                            help='''directory to monitor''',
                            default='.')
 
+    custom_args(argparser)
+
     args = argparser.parse_args()
 
     logger.setLevel(logging.DEBUG)
@@ -173,16 +143,7 @@ if __name__ == "__main__":
     logger.addHandler(ch)
     logger.debug(args)
     path = args.monitor_directory
-    event_handler = KafkaHandler(
-        patterns=args.patterns,
-        ignore_patterns=args.ignore_patterns,
-        ignore_directories=args.ignore_directories,
-        case_sensitive=args.case_sensitive,
-        kafka_topic=args.kafka_topic,
-        kafka_bootstrap=args.kafka_bootstrap,
-        monitor_directory=args.monitor_directory,
-        dry_run=args.dry_run,
-    )
+    event_handler = DOSHandler(args)
 
     if args.inventory:
         logger.debug("inventory {}".format(path))
@@ -212,4 +173,3 @@ if __name__ == "__main__":
         except KeyboardInterrupt:
             observer.stop()
         observer.join()
-

@@ -31,6 +31,8 @@ services:
     volumes:
       # For testing from host
       - "./volumes/files:/files"
+      # client side certs and keys
+      - "./volumes/client-certs:/client-certs"
     environment:
       # TODO do env subsitute
       # coordinate with services/swift/files/proxy-server.conf
@@ -45,6 +47,9 @@ services:
       context: services/aws-observer
     depends_on:
       - kafka
+    volumes:
+      # client side certs and keys
+      - "./volumes/client-certs:/client-certs"
     network_mode: host
     environment:
       - KAFKA_TOPIC=${KAFKA_DOS_TOPIC}
@@ -58,6 +63,9 @@ services:
   google-observer:
     build:
       context: services/google-observer
+    volumes:
+      # client side certs and keys
+      - "./volumes/client-certs:/client-certs"
     depends_on:
       - kafka
     network_mode: host
@@ -71,6 +79,9 @@ services:
   azure-observer:
     build:
       context: services/azure-observer
+    volumes:
+      # client side certs and keys
+      - "./volumes/client-certs:/client-certs"
     depends_on:
       - kafka
     network_mode: host
@@ -88,6 +99,9 @@ services:
   file-observer:
     build:
       context: services/file-observer
+    volumes:
+      # client side certs and keys
+      - "./volumes/client-certs:/client-certs"
     network_mode: host
     depends_on:
       - kafka
@@ -103,6 +117,9 @@ services:
   elastic-sink:
     build:
       context: services/elastic-sink
+    volumes:
+      # client side certs and keys
+      - "./volumes/client-certs:/client-certs"
     network_mode: host
     depends_on:
       - kafka

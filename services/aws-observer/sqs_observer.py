@@ -1,9 +1,10 @@
-from kafka import KafkaProducer
 import json
 import boto3
 import argparse
 import logging
 import urllib
+from customizations import store, custom_args
+
 
 logger = logging.getLogger('sqs_observer')
 logger.setLevel(logging.DEBUG)
@@ -19,16 +20,6 @@ logger.addHandler(ch)
 #  python sqs_consumer.py
 # mainipulate the bucket via
 # AWS_ACCESS_KEY_ID=. AWS_SECRET_ACCESS_KEY=. aws s3 cp text  s3://dos-testing
-
-
-def to_kafka(args, payload):
-    """ write dict to kafka """
-    producer = KafkaProducer(bootstrap_servers=args.kafka_bootstrap)
-    key = '{}~{}'.format(payload['system_metadata']['event_type'],
-                         payload['urls'][0])
-    producer.send(args.kafka_topic, key=key, value=json.dumps(payload))
-    producer.flush()
-    logger.debug('sent to kafka topic: {}'.format(args.kafka_topic))
 
 
 def process(args, message):
@@ -54,7 +45,7 @@ def process(args, message):
             s3["bucket"]["ownerIdentity"]["principalId"]
         system_metadata['event_type'] = record["eventName"]
         obj = s3['object']
-        
+
         user_metadata = {}
         if not system_metadata['event_type'] == "ObjectRemoved:Delete":
             head = client.head_object(Bucket=s3['bucket']['name'],
@@ -82,7 +73,7 @@ def process(args, message):
           "user_metadata": user_metadata
         }
         logger.debug(json.dumps(data_object))
-        to_kafka(args, data_object)
+        store(args, data_object)
     return True
 
 
@@ -109,17 +100,11 @@ def consume(args):
 
 def populate_args(argparser):
     """add arguments we expect """
-    argparser.add_argument('--kafka_topic', '-kt',
-                           help='''kafka_topic''',
-                           default='s3-topic')
-
-    argparser.add_argument('--kafka_bootstrap', '-kb',
-                           help='''kafka host:port''',
-                           default='localhost:9092')
 
     argparser.add_argument('--sqs_queue_name', '-qn',
                            help='''sqs queue name''',
                            default='dos-testing')
+    custom_args(argsparser)
 
 if __name__ == '__main__':  # pragma: no cover
     argparser = argparse.ArgumentParser(

@@ -128,6 +128,23 @@ if __name__ == "__main__":
                            default=False,
                            action='store_true')
 
+    argparser.add_argument('--no_tls',
+                           help='kafka connection plaintext? default: False',
+                           default=False,
+                           action='store_true')
+
+    argparser.add_argument('--ssl_cafile',
+                           help='server CA pem file',
+                           default='/client-certs/CARoot.pem')
+
+    argparser.add_argument('--ssl_certfile',
+                           help='client certificate pem file',
+                           default='/client-certs/certificate.pem')
+
+    argparser.add_argument('--ssl_keyfile',
+                           help='client private key pem file',
+                           default='/client-certs/key.pem')
+
     args = argparser.parse_args()
     logger.setLevel(logging.DEBUG)
     ch = logging.StreamHandler()
@@ -140,12 +157,26 @@ if __name__ == "__main__":
     )
 
     # To consume latest messages and auto-commit offsets
-    consumer = KafkaConsumer(args.kafka_topic,
-                             group_id=args.group_id,
-                             bootstrap_servers=[args.kafka_bootstrap],
-                             # consumer_timeout_ms=10000,
-                             auto_offset_reset='earliest',
-                             enable_auto_commit=args.enable_auto_commit)
+    if not args.no_tls:
+        consumer = KafkaConsumer(args.kafka_topic,
+                                 group_id=args.group_id,
+                                 bootstrap_servers=[args.kafka_bootstrap],
+                                 # consumer_timeout_ms=10000,
+                                 auto_offset_reset='earliest',
+                                 enable_auto_commit=args.enable_auto_commit,
+                                 security_protocol='SSL',
+                                 ssl_check_hostname=False,
+                                 ssl_cafile=args.ssl_cafile,
+                                 ssl_certfile=args.ssl_certfile,
+                                 ssl_keyfile=args.ssl_keyfile)
+    else:
+        consumer = KafkaConsumer(args.kafka_topic,
+                                 group_id=args.group_id,
+                                 bootstrap_servers=[args.kafka_bootstrap],
+                                 # consumer_timeout_ms=10000,
+                                 auto_offset_reset='earliest',
+                                 enable_auto_commit=args.enable_auto_commit)
+
     for message in consumer:
         # message value and key are raw bytes -- decode if necessary!
         # e.g., for unicode: `message.value.decode('utf-8')`

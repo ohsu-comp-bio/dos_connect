@@ -2,6 +2,7 @@ from kafka import KafkaProducer
 import os
 import hashlib
 import re
+from customizations import store, custom_args
 
 
 """ """
@@ -48,7 +49,8 @@ def md5sum(full_path, url, blocksize=65536, md5filename='md5sum.txt'):
     hash = hashlib.md5()
     try:
         with open(full_path, "rb") as f:
-            print("*** calculating hash for {} {}".format(full_path, orig_path))
+            print("*** calculating hash for {} {}".format(full_path,
+                                                          orig_path))
             for block in iter(lambda: f.read(blocksize), b""):
                 hash.update(block)
         return hash.hexdigest()
@@ -56,15 +58,3 @@ def md5sum(full_path, url, blocksize=65536, md5filename='md5sum.txt'):
         print("**** could not open {}".format(full_path))
         print e
         return None
-
-
-def producer(bootstrap_servers):
-    """ create a secure connection """
-    producer = KafkaProducer(bootstrap_servers=bootstrap_servers,
-                             security_protocol='SSL',
-                             ssl_check_hostname=False,
-                             ssl_cafile='CARoot.pem',
-                             ssl_certfile='certificate.pem',
-                             ssl_keyfile='key.pem')
-    return producer
-
