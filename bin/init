@@ -11,15 +11,18 @@ fi
 mkdir -p volumes/jars
 mkdir -p volumes/files
 mkdir -p volumes/elastic/backups
+mkdir -p volumes/kafka
+# (chmod 0777) as Kafka and Zookeeper run as user nobody.
+chmod 777 volumes/kafka
 
 # start core services
 echo "## create docker compose images..."
-docker-compose create
+docker-compose up --no-start kafka
 echo "## start docker compose images for zookeeper kafka..."
-docker-compose start zookeeper kafka
+docker-compose start kafka
 
 echo "## wait for kafka to start up..."
-until $(docker-compose logs kafka | grep started > /dev/null); do
+until $(docker-compose exec kafka cat /var/log/broker.log | grep started > /dev/null); do
     printf '.'
     sleep 5
 done
@@ -27,6 +30,23 @@ echo "kafka up OK"
 
 # create whatever topics here.
 bin/topic-create $KAFKA_DOS_TOPIC
+
+# process jks files and create standard certs and client private key
+echo "creating client certs and keys"
+mkdir -p volumes/client-certs
+rm -f volumes/client-certs/*
+pushd volumes/kafka/certs
+# get the key pem
+keytool  -storepass $STOREPASS -srcstorepass $STOREPASS  -v -importkeystore -srckeystore  client.jks  \
+        -srcalias client -destkeystore ../../client-certs/cert_and_key.p12 -deststoretype PKCS12
+openssl  pkcs12 -in ../../client-certs/cert_and_key.p12 -nocerts -nodes -passin pass:$STOREPASS > ../../client-certs/key.pem
+# get the client certificate
+keytool -exportcert -alias client -storepass $STOREPASS -keystore client.jks \
+        -rfc -file ../../client-certs/certificate.pem
+# get the server certificate
+keytool  -storepass $STOREPASS -exportcert -alias landoopfastdatadevca -keystore truststore.jks -rfc -file ../../client-certs/CARoot.pem
+rm ../../client-certs/cert_and_key.p12
+popd
 
 echo "## start remainder of containers ...."
 docker-compose start

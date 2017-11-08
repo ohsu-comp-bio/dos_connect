@@ -242,8 +242,8 @@ class LoggingNotifier(object):
             # self.logger.debug('event_type:{}'.format(event_type))
             # self.logger.debug(payload)
             # self.logger.debug('api_url:{}'.format(api_url))
-            # self.logger.debug('kafka_topic:{}'.format(kafka_topic))
-            # self.logger.debug('kafka_bootstrap:{}'.format(kafka_bootstrap))
+            self.logger.debug('kafka_topic:{}'.format(kafka_topic))
+            self.logger.debug('kafka_bootstrap:{}'.format(kafka_bootstrap))
             if api_url:
                 r = requests.post(api_url,
                                   data=json.dumps(payload),
