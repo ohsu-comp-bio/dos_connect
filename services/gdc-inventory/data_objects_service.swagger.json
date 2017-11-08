@@ -18,7 +18,7 @@
     "/ga4gh/dos/v1/databundles": {
       "post": {
         "summary": "Create a new Data Bundle",
-        "x-swagger-router-controller": "app", 
+        "x-swagger-router-controller": "app",
         "operationId": "CreateDataBundle",
         "responses": {
           "200": {
@@ -46,7 +46,7 @@
     "/ga4gh/dos/v1/databundles/list": {
       "post": {
         "summary": "List the Data Bundles",
-        "x-swagger-router-controller": "app", 
+        "x-swagger-router-controller": "app",
         "operationId": "ListDataBundles",
         "responses": {
           "200": {
@@ -74,7 +74,7 @@
     "/ga4gh/dos/v1/databundles/{data_bundle_id}": {
       "delete": {
         "summary": "Delete a Data Bundle",
-        "x-swagger-router-controller": "app", 
+        "x-swagger-router-controller": "app",
         "operationId": "DeleteDataBundle",
         "responses": {
           "200": {
@@ -98,7 +98,7 @@
       },
       "put": {
         "summary": "Update a Data Bundle",
-        "x-swagger-router-controller": "app", 
+        "x-swagger-router-controller": "app",
         "operationId": "UpdateDataBundle",
         "responses": {
           "200": {
@@ -132,7 +132,7 @@
     "/ga4gh/dos/v1/dataobjects": {
       "post": {
         "summary": "Make a new Data Object",
-        "x-swagger-router-controller": "app", 
+        "x-swagger-router-controller": "app",
         "operationId": "CreateDataObject",
         "responses": {
           "200": {
@@ -160,7 +160,7 @@
     "/ga4gh/dos/v1/dataobjects/list": {
       "post": {
         "summary": "List the Data Objects",
-        "x-swagger-router-controller": "app", 
+        "x-swagger-router-controller": "app",
         "operationId": "ListDataObjects",
         "responses": {
           "200": {
@@ -188,7 +188,7 @@
     "/ga4gh/dos/v1/dataobjects/{data_object_id}": {
       "get": {
         "summary": "Retrieve a Data Object",
-        "x-swagger-router-controller": "app", 
+        "x-swagger-router-controller": "app",
         "operationId": "GetDataObject",
         "responses": {
           "200": {
@@ -219,7 +219,7 @@
       },
       "delete": {
         "summary": "Delete a Data Object index entry",
-        "x-swagger-router-controller": "app", 
+        "x-swagger-router-controller": "app",
         "operationId": "DeleteDataObject",
         "responses": {
           "200": {
@@ -243,7 +243,7 @@
       },
       "put": {
         "summary": "Update a Data Object",
-        "x-swagger-router-controller": "app", 
+        "x-swagger-router-controller": "app",
         "operationId": "UpdateDataObject",
         "responses": {
           "200": {
@@ -276,7 +276,7 @@
     },
     "/ga4gh/dos/v1/dataobjects/{data_object_id}/versions": {
       "get": {
-        "x-swagger-router-controller": "app", 
+        "x-swagger-router-controller": "app",
         "operationId": "GetDataObjectVersions",
         "responses": {
           "200": {
@@ -682,50 +682,13 @@
     "ga4ghUpdateDataObjectRequest": {
       "type": "object",
       "properties": {
-        "data_object_id": {
-          "type": "string",
-          "description": "REQUIRED\nThe identifier of the Data Object to be updated."
-        },
-        "name": {
-          "type": "string",
-          "description": "OPTIONAL\nA string that can be optionally used to name a resource."
-        },
-        "size": {
-          "type": "string",
-          "format": "int64",
-          "description": "REQUIRED\nThe computed file size in bytes."
-        },
-        "mime_type": {
-          "type": "string",
-          "description": "OPTIONAL\nA string providing the mime-type of the resource.\nFor example, \"application/json\"."
-        },
-        "checksums": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/ga4ghChecksum"
-          },
-          "description": "REQUIRED\nAt least one checksum must be provided."
-        },
-        "urls": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/ga4ghURL"
-          },
-          "description": "OPTIONAL\nThe list of URLs that can be used to access the Data Object."
-        },
-        "description": {
-          "type": "string",
-          "description": "OPTIONAL\nA human readable description of the contents of the Data Object."
-        },
-        "aliases": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "OPTIONAL\nA list of strings that can be used to identify this Data Object."
+        "data_object": {
+          "$ref": "#/definitions/ga4ghDataObject",
+          "description": "REQUIRED\nThe data object to be created. The ID scheme is left up to the\nimplementor but should be unique to the server instance."
         }
-      }
-    },
+      },
+      "description": "The Data Object one would like to index. One must provide any aliases\nand URLs to this file when sending the CreateDataObjectRequest. It is up\nto implementations to validate that the Data Object is available from\nthe provided URLs."
+    },      
     "ga4ghUpdateDataObjectResponse": {
       "type": "object",
       "properties": {

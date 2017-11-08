@@ -7,7 +7,7 @@ import uuid
 import datetime
 from dateutil.parser import parse
 from elasticsearch import Elasticsearch
-
+import elasticsearch
 
 DEFAULT_PAGE_SIZE = 100
 
@@ -16,7 +16,8 @@ data_objects = {}
 data_bundles = {}
 
 _es = Elasticsearch()
-
+ES_INDEX = 'dos-web-app'
+ES_VERSIONS = 'dos-web-app-versions'
 # Application logic
 
 
@@ -24,13 +25,23 @@ def now():
     return str(datetime.datetime.now().isoformat("T") + "Z")
 
 
-def get_most_recent(key):
-    max = {'created': '01-01-1965 00:00:00Z'}
-    for version in data_objects[key].keys():
-        data_object = data_objects[key][version]
-        if parse(data_object['created']) > parse(max['created']):
-            max = data_object
-    return max
+def get_most_recent(data_object_id):
+    """ get the doc from the current index """
+    doc = _es.get(index=ES_INDEX, doc_type='dos', id=data_object_id)
+    return doc['_source']
+
+
+def create_version(data_object_id):
+    """ look up current version and back it up in ES_VERSIONS"""
+    # Check to make sure we are updating an existing document.
+    old_do = get_most_recent(data_object_id)
+    # create history
+    _es.create(index=ES_VERSIONS,
+               doc_type='dos',
+               id='{}-{}'.format(old_do['id'],
+                                 now()),
+               body=old_do)
+    return old_do
 
 
 def filter_data_objects(predicate):
@@ -46,8 +57,10 @@ def add_created_timestamps(doc):
     """
     Adds created and updated timestamps to the document.
     """
-    doc['created'] = now()
-    doc['updated'] = now()
+    if 'created' not in doc:
+        doc['created'] = now()
+    if 'updated' not in doc:
+        doc['updated'] = now()
     return doc
 
 
@@ -55,7 +68,8 @@ def add_updated_timestamps(doc):
     """
     Adds created and updated timestamps to the document.
     """
-    doc['updated'] = now()
+    if 'updated' not in doc:
+        doc['updated'] = now()
     return doc
 
 
@@ -63,47 +77,62 @@ def add_updated_timestamps(doc):
 
 
 def CreateDataObject(**kwargs):
-    # TODO Safely create
     body = kwargs['body']['data_object']
     doc = add_created_timestamps(body)
     version = doc.get('version', None)
     if not version:
         doc['version'] = now()
-    if doc.get('id', None):
-        temp_id = str(uuid.uuid4())
-        if data_objects.get(doc['id'], None):
-            # issue an identifier if a valid one hasn't been provided
-            doc['id'] = temp_id
-    else:
-        temp_id = str(uuid.uuid4())
-        doc['id'] = temp_id
-    data_objects[doc['id']] = {}
-    data_objects[doc['id']][doc['version']] = doc
-    return({"data_object_id": doc['id']}, 200)
+    if not doc.get('id', None):
+        doc['id'] = doc['checksums'][0]['checksum']
+    try:
+        _es.create(index=ES_INDEX, doc_type='dos', id=doc['id'], body=doc)
+        return({"data_object_id": doc['id']}, 200)
+    except elasticsearch.exceptions.ConflictError as e:
+        existing_doc = _es.get(index=ES_INDEX, doc_type='dos', id=doc['id'])
+        existing_doc = existing_doc['_source']
+        # same checksum, update it in place
+        if not existing_doc['checksums'][0]['checksum'] == \
+                doc['checksums'][0]['checksum']:
+            # otherwise raise error
+            raise e
+        existing_urls = existing_doc['urls']
+        new_urls = doc['urls']
+        # first create version
+        create_version(doc['id'])
+        _es.update(index=ES_INDEX, doc_type='dos',
+                   id=doc['checksums'][0]['checksum'],
+                   body={
+                    'doc': {
+                        'urls': existing_urls + new_urls,
+                        }
+                   })
+        return({"data_object_id": doc['id']}, 200)
 
 
 def GetDataObject(**kwargs):
+    """ get a single item """
     data_object_id = kwargs['data_object_id']
-    version = kwargs.get('version', None)
-    # Implementation detail, this server uses integer version numbers.
-    # Get the Data Object from our dictionary
-    data_object_key = data_objects.get(data_object_id, None)
-    if data_object_key and not version:
-        data_object = get_most_recent(data_object_id)
-        return({"data_object": data_object}, 200)
-    elif data_object_key and data_objects[data_object_id].get(version, None):
-        data_object = data_objects[data_object_id][version]
-        return ({"data_object": data_object}, 200)
-    else:
+    # TODO - if current version is not one requested, look at version index
+    # version = kwargs.get('version', None)
+    try:
+        return({"data_object": get_most_recent(data_object_id)}, 200)
+    except elasticsearch.exceptions.NotFoundError as e:
         return("No Content", 404)
 
 
 def GetDataObjectVersions(**kwargs):
     data_object_id = kwargs['data_object_id']
-    # Implementation detail, this server uses integer version numbers.
     # Get the Data Object from our dictionary
-    data_object_versions_dict = data_objects.get(data_object_id, None)
-    data_object_versions = [x[1] for x in data_object_versions_dict.items()]
+    res = es.search(index='{},{}'.format(ES_INDEX, ES_VERSIONS),
+                    doc_type='dos',
+                    body={
+                        "query": {
+                            "regexp": {
+                                "id": "{}[-]*.*".format(data_object_id)
+                            }
+                        }
+                    }
+                    )
     if data_object_versions:
         return({"data_objects": data_object_versions}, 200)
     else:
@@ -113,29 +142,36 @@ def GetDataObjectVersions(**kwargs):
 def UpdateDataObject(**kwargs):
     data_object_id = kwargs['data_object_id']
     body = kwargs['body']['data_object']
-    # Check to make sure we are updating an existing document.
-    old_data_object = get_most_recent(data_object_id)
-    # Upsert the new body in place of the old document
-    doc = add_updated_timestamps(body)
-    doc['created'] = old_data_object['created']
-    # Set the version number to be the length of the array +1, since
-    # we're about to append.
-    # We need to safely set the version if they provided one that
-    # collides we'll pad it. If they provided a good one, we will
-    # accept it. If they don't provide one, we'll give one.
-    new_version = doc.get('version', None)
-    if new_version and new_version != doc['version']:
-        doc['version'] = new_version
-    else:
-        doc['version'] = now()
-    doc['id'] = old_data_object['id']
-    data_objects[data_object_id][doc['version']] = doc
-    return({"data_object_id": data_object_id}, 200)
+    try:
+        create_version(data_object_id)
+        # Upsert the new body in place of the old document
+        doc = add_updated_timestamps(body)
+        doc['created'] = old_data_object['created']
+        # Set the version number to be the length of the array +1, since
+        # we're about to append.
+        # We need to safely set the version if they provided one that
+        # collides we'll pad it. If they provided a good one, we will
+        # accept it. If they don't provide one, we'll give one.
+        new_version = doc.get('version', None)
+        if new_version and new_version != doc['version']:
+            doc['version'] = new_version
+        else:
+            doc['version'] = now()
+        # index new doc
+        _es.index(index=ES_INDEX, doc_type='dos',
+                  id=data_object_id,
+                  body={
+                    'doc': doc
+                  })
+        return({"data_object_id": data_object_id}, 200)
+    except elasticsearch.exceptions.NotFoundError as e:
+        return("No Content", 404)
 
 
 def DeleteDataObject(**kwargs):
     data_object_id = kwargs['data_object_id']
-    del data_objects[data_object_id]
+    create_version(data_object_id)
+    _es.delete(index=ES_INDEX, doc_type='dos', id=data_object_id)
     return({"data_object_id": data_object_id}, 200)
 
 
