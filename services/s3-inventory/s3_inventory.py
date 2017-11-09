@@ -49,10 +49,16 @@ class DOSHandler(object):
         if endpoint_url:
             parsed = urlparse(endpoint_url)
             _url = 's3://{}/{}/{}'.format(parsed.netloc, bucket_name,  _id)
+
         _system_metadata = {
             'StorageClass': record['StorageClass'],
             "event_type": _event_type,
             "bucket_name": bucket_name
+        }
+        _url = {
+            'url': _url,
+            "system_metadata": _system_metadata,
+            "user_metadata": metadata,
         }
         etag = record['ETag']
         if etag.startswith('"') and etag.endswith('"'):
@@ -66,11 +72,8 @@ class DOSHandler(object):
           "created":  record['LastModified'].isoformat(),
           "updated":  record['LastModified'].isoformat(),
           # TODO multipart ...
-          # https://forums.aws.amazon.com/thread.jspa?messageID=203436&#203436
-          "checksum": etag,
-          "urls": [_url],
-          "system_metadata": _system_metadata,
-          "user_metadata": metadata,
+          "checksums": [{'checksum': etag, 'type': 'md5'}],
+          "urls": [_url]
         }
         store(args, data_object)
 
@@ -79,19 +82,19 @@ if __name__ == "__main__":
 
     argparser = argparse.ArgumentParser(
         description='Consume events from bucket, populate store')
-
     argparser.add_argument('--dry_run', '-d',
                            help='''dry run''',
                            default=False,
                            action='store_true')
-
     argparser.add_argument('--endpoint_url', '-ep',
                            help='''for swift, ceph, other non-aws endpoints''',
                            default=None)
-
     argparser.add_argument('bucket_name',
                            help='''bucket_name to inventory''',
                            )
+    argparser.add_argument("-v", "--verbose", help="increase output verbosity",
+                           default=False,
+                           action="store_true")
     custom_args(argparser)
 
     args = argparser.parse_args()
@@ -132,3 +135,4 @@ if __name__ == "__main__":
             metadata = head['Metadata'] if ('Metadata' in head) else None
             event_handler.on_any_event(args.endpoint_url, region,
                                        args.bucket_name, record, metadata)
+
