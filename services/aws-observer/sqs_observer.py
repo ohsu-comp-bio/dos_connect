@@ -4,6 +4,7 @@ import argparse
 import logging
 import urllib
 from customizations import store, custom_args
+import sys
 
 
 # Boto3 will check these environment variables for credentials:
@@ -43,16 +44,22 @@ def process(args, message):
 
         user_metadata = {}
         if not system_metadata['event_type'] == "ObjectRemoved:Delete":
+            logger.debug("head {} {}".format(s3['bucket']['name'], obj['key']))
             head = client.head_object(Bucket=s3['bucket']['name'],
                                       Key=obj['key'])
             user_metadata = head['Metadata'] if ('Metadata' in head) else None
 
         _id = urllib.quote_plus(obj['key'])
-        _urls = ["s3://{}.s3-{}.amazonaws.com/{}".format(
+        _url = "s3://{}.s3-{}.amazonaws.com/{}".format(
                   system_metadata['bucket_name'],
                   record['awsRegion'],
                   _id
-                  )]
+                  )
+        _url = {
+            'url': _url,
+            "system_metadata": system_metadata,
+            "user_metadata": user_metadata,
+        }
         data_object = {
           "id": _id,
           "file_size": obj.get('size', None),
@@ -61,11 +68,9 @@ def process(args, message):
           "updated": record['eventTime'],
           # TODO multipart ...
           # https://forums.aws.amazon.com/thread.jspa?messageID=203436&#203436
-          "checksum": obj.get('eTag', None),
+          "checksums": [{'checksum': obj.get('eTag', None), 'type': 'md5'}],
           # http://docs.aws.amazon.com/AmazonS3/latest/dev/UsingBucket.html#access-bucket-intro
-          "urls": _urls,
-          "system_metadata": system_metadata,
-          "user_metadata": user_metadata
+          "urls": [_url],
         }
         logger.debug(json.dumps(data_object))
         store(args, data_object)
@@ -102,7 +107,11 @@ def populate_args(argparser):
     argparser.add_argument("-v", "--verbose", help="increase output verbosity",
                            default=False,
                            action="store_true")
-    custom_args(argsparser)
+    argparser.add_argument('--dry_run', '-d',
+                           help='''dry run''',
+                           default=False,
+                           action='store_true')
+    custom_args(argparser)
 
 if __name__ == '__main__':  # pragma: no cover
     argparser = argparse.ArgumentParser(

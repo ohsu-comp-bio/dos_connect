@@ -17,9 +17,8 @@ chmod 777 volumes/kafka
 
 # start core services
 echo "## create docker compose images..."
-docker-compose up --no-start kafka
 echo "## start docker compose images for zookeeper kafka..."
-docker-compose start kafka
+docker-compose up -d kafka
 
 echo "## wait for kafka to start up..."
 until $(docker-compose exec kafka cat /var/log/broker.log | grep started > /dev/null); do
@@ -49,6 +48,6 @@ rm ../../client-certs/cert_and_key.p12
 popd
 
 echo "## start remainder of containers ...."
-docker-compose start
+docker-compose up -d
 
 
