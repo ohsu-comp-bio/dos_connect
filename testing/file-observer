@@ -1,4 +1,0 @@
-#!/bin/bash
-echo 'testing' > volumes/files/testing-file-observer.txt
-sleep 1
-rm  volumes/files/testing-file-observer.txt

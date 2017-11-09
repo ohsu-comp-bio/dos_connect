@@ -5,16 +5,13 @@ import re
 import logging
 from customizations import store, custom_args
 
-logger = logging.getLogger(__name__)
-
-
 """ """
 all_checksums = {}
 try:
     all_checksums = open('SMMARTData/all_checksums.tsv').read().split()
     all_checksums = dict(zip(all_checksums[0::2], all_checksums[1::2]))
 except Exception as e:
-    logger.warn("**** could not open 'SMMARTData/all_checksums.tsv'")
+    print("WARN could not open 'SMMARTData/all_checksums.tsv'")
 
 
 def user_metadata(full_path):
@@ -34,6 +31,7 @@ def md5sum(full_path, url, blocksize=65536, md5filename='md5sum.txt'):
     """ lookup md5 in local file, or compute it on the fly
         url is provided to lookup from cache
     """
+    logger = logging.getLogger(__name__)
     # since md5filename only found in `real` directory, use that
     orig_path = full_path
     full_path = os.path.realpath(full_path)

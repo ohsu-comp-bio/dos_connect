@@ -100,18 +100,19 @@ services:
     build:
       context: services/file-observer
     volumes:
-      # client side certs and keys
-      - "./volumes/client-certs:/client-certs"
     network_mode: host
     depends_on:
       - kafka
     volumes:
+      #  test directory to observe
       - "./volumes/files:/files"
+      # client side certs and keys
+      - "./volumes/client-certs:/client-certs"
     environment:
       - KAFKA_TOPIC=${KAFKA_DOS_TOPIC}
       - KAFKA_BOOTSTRAP=${KAFKA_BOOTSTRAP_SERVERS}
       - MONITOR_DIRECTORY=/files
-
+      - OBSERVER_PARMS=--verbose
 
   # user service: monitor topic, write to elastic
   elastic-sink:

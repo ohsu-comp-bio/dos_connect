@@ -9,6 +9,13 @@ import sys
 logger = logging.getLogger('elastic_sink')
 
 
+def get_id(value):
+    """ get the md5 checksum as the id """
+    for checksum in value['checksums']:
+        if checksum['type'] == 'md5':
+            return checksum['checksum']
+
+
 class ElasticHandler(object):
 
     """Maintain DOS key/value in Elastic """
@@ -62,14 +69,14 @@ class ElasticHandler(object):
     def update_elastic(self, key, value):
         """ update dict to elastic"""
         es = self._es
-        doc = es.get(index='dos', doc_type='dos', id=value['checksum'])
+        doc = es.get(index='dos', doc_type='dos', id=get_id(value))
         existing_urls = doc['_source']['urls']
         new_urls = value['urls']
         existing_metadata = doc['_source']['user_metadata']
         new_metadata = value['user_metadata']
         new_metadata.update(existing_metadata)
         es.update(index='dos', doc_type='dos',
-                  id=value['checksum'],
+                  id=get_id(value),
                   body={
                     'doc': {
                         'urls': existing_urls + new_urls,
@@ -94,7 +101,7 @@ class ElasticHandler(object):
                 logger.debug(del_rsp)
         else:
             es.create(index='dos', doc_type='dos',
-                      id=value['checksum'], body=value)
+                      id=get_id(value), body=value)
 
 
 if __name__ == "__main__":
@@ -194,3 +201,4 @@ if __name__ == "__main__":
         sys.stderr.write('.')
         sys.stderr.flush()
         event_handler.on_any_event(message.key, json.loads(message.value))
+
