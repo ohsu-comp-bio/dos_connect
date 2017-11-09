@@ -72,15 +72,12 @@ class ElasticHandler(object):
         doc = es.get(index='dos', doc_type='dos', id=get_id(value))
         existing_urls = doc['_source']['urls']
         new_urls = value['urls']
-        existing_metadata = doc['_source']['user_metadata']
-        new_metadata = value['user_metadata']
-        new_metadata.update(existing_metadata)
+        updated_urls = new_urls + [u for u in existing_urls if u['url'] not in [n['url'] for n in new_urls]]
         es.update(index='dos', doc_type='dos',
                   id=get_id(value),
                   body={
                     'doc': {
-                        'urls': existing_urls + new_urls,
-                        'user_metadata': new_metadata,
+                        'urls': updated_urls,
                         }
                   })
 

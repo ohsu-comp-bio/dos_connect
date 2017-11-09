@@ -44,10 +44,12 @@ def process(args, message):
 
         user_metadata = {}
         if not system_metadata['event_type'] == "ObjectRemoved:Delete":
-            logger.debug("head {} {}".format(s3['bucket']['name'], obj['key']))
-            head = client.head_object(Bucket=s3['bucket']['name'],
-                                      Key=obj['key'])
-            user_metadata = head['Metadata'] if ('Metadata' in head) else None
+            try:
+                head = client.head_object(Bucket=s3['bucket']['name'],
+                                          Key=obj['key'])
+                user_metadata = head['Metadata'] if ('Metadata' in head) else None
+            except Exception as e:
+                logger.info("head failed. {} {} {}".format(s3['bucket']['name'], obj['key'], e))
 
         _id = urllib.quote_plus(obj['key'])
         _url = "s3://{}.s3-{}.amazonaws.com/{}".format(
