@@ -6,27 +6,21 @@ import boto3
 import logging
 import argparse
 import urllib
-from kafka import KafkaProducer
 from botocore.client import Config
 from urlparse import urlparse
+from customizations import store, custom_args
 
 logger = logging.getLogger('s3_inventory')
 
 
-class KafkaHandler(object):
+class DOSHandler(object):
 
-    """Creates DOS object on kafka queue in response to matched events."""
+    """Creates DOS object in store in response to matched events."""
 
     def __init__(self,
-                 kafka_topic=None, kafka_bootstrap=None,
-                 dry_run=False):
-        super(KafkaHandler, self).__init__()
-        self.kafka_topic = kafka_topic
-        self.kafka_bootstrap = kafka_bootstrap
-        self.dry_run = dry_run
-        logger.debug(
-            'kafka_topic:{} kafka_bootstrap:{}'
-            .format(kafka_topic, kafka_bootstrap))
+                 args=None):
+        super(DOSHandler, self).__init__()
+        self.dry_run = args.dry_run
 
     def on_any_event(self, endpoint_url, region, bucket_name, record,
                      metadata):
@@ -73,39 +67,18 @@ class KafkaHandler(object):
           "updated":  record['LastModified'].isoformat(),
           # TODO multipart ...
           # https://forums.aws.amazon.com/thread.jspa?messageID=203436&#203436
-          "checksum": etag, 
+          "checksum": etag,
           "urls": [_url],
           "system_metadata": _system_metadata,
           "user_metadata": metadata,
         }
-        self.to_kafka(data_object)
-
-    def to_kafka(self, payload):
-        """ write dict to kafka """
-        key = '{}~{}'.format(payload['system_metadata']['event_type'],
-                             payload['urls'][0])
-        if self.dry_run:
-            logger.debug(key)
-            logger.debug(payload)
-            return
-        producer = KafkaProducer(bootstrap_servers=self.kafka_bootstrap)
-        producer.send(args.kafka_topic, key=key, value=json.dumps(payload))
-        producer.flush()
-        logger.debug('sent to kafka: {} {}'.format(self.kafka_topic, key))
+        store(args, data_object)
 
 
 if __name__ == "__main__":
 
     argparser = argparse.ArgumentParser(
-        description='Consume events from bucket, populate kafka')
-
-    argparser.add_argument('--kafka_topic', '-kt',
-                           help='''kafka_topic''',
-                           default='s3-topic')
-
-    argparser.add_argument('--kafka_bootstrap', '-kb',
-                           help='''kafka host:port''',
-                           default='localhost:9092')
+        description='Consume events from bucket, populate store')
 
     argparser.add_argument('--dry_run', '-d',
                            help='''dry run''',
@@ -119,19 +92,19 @@ if __name__ == "__main__":
     argparser.add_argument('bucket_name',
                            help='''bucket_name to inventory''',
                            )
+    custom_args(argparser)
 
     args = argparser.parse_args()
 
-    logger.setLevel(logging.DEBUG)
-    ch = logging.StreamHandler()
-    logger.addHandler(ch)
+    if args.verbose:
+        logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+    else:
+        logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+
+    logger = logging.getLogger(__name__)
 
     logger.debug(args)
-    event_handler = KafkaHandler(
-        kafka_topic=args.kafka_topic,
-        kafka_bootstrap=args.kafka_bootstrap,
-        dry_run=args.dry_run,
-    )
+    event_handler = DOSHandler(args)
 
     # support non aws hosts
     if args.endpoint_url:
