@@ -6,7 +6,6 @@ import argparse
 import logging
 import sys
 
-logger = logging.getLogger('elastic_sink')
 
 
 def get_id(value):

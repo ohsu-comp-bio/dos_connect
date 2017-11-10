@@ -193,20 +193,20 @@ def _producer(conf):
     kafka_topic = conf.get('kafka_topic', None)
     kafka_bootstrap = conf.get('kafka_bootstrap', None)
     ssl_cafile = conf.get('ssl_cafile', None)
-    ssl_cafile = conf.get('ssl_cafile', None)
+    ssl_certfile = conf.get('ssl_certfile', None)
     ssl_keyfile = conf.get('ssl_keyfile', None)
-    no_tls = conf.get('no_tls', None)
+    no_tls = conf.get('no_tls', False)
 
     if not _PRODUCER:
-        if not no_tls:
-            _PRODUCER = KafkaProducer(bootstrap_servers=kafka_bootstrap,
-                                      security_protocol='SSL',
-                                      ssl_check_hostname=False,
-                                      ssl_cafile=ssl_cafile,
-                                      ssl_certfile=ssl_certfile,
-                                      ssl_keyfile=ssl_keyfile)
-        else:
-            _PRODUCER = KafkaProducer(bootstrap_servers=args.kafka_bootstrap)
+#         if not no_tls:
+#             _PRODUCER = KafkaProducer(bootstrap_servers=kafka_bootstrap,
+#                                       security_protocol='SSL',
+#                                       ssl_check_hostname=False,
+#                                       ssl_cafile=ssl_cafile,
+#                                       ssl_certfile=ssl_certfile,
+#                                       ssl_keyfile=ssl_keyfile)
+#         else:
+        _PRODUCER = KafkaProducer(bootstrap_servers=kafka_bootstrap)
 
     return _PRODUCER
 
@@ -258,7 +258,7 @@ class LoggingNotifier(object):
               "file_size": swift['content-length'],
               "created": swift['updated_at'],
               "updated": swift['updated_at'],
-              "checksums": {'checksum': swift['etag'], 'type': 'md5'},
+              "checksums": [{'checksum': swift['etag'], 'type': 'md5'}],
               "urls": [_url],
             }
         return data_object
@@ -281,13 +281,13 @@ class LoggingNotifier(object):
                 self.logger.debug(r.content)
             if kafka_topic:
                 """ write dict to kafka """
-                producer = _producer(conf)
+                producer = _producer(self.conf)
                 payload = self.to_data_object(payload)
                 key = '{}~{}'.format(payload['urls'][0]['system_metadata']['event_type'],
                                      payload['urls'][0]['url'])
                 producer.send(kafka_topic, key=key, value=json.dumps(payload))
                 producer.flush()
-                self.logger.debug('sent to kafka topic: {}'.format(kafka_topic))
+                self.logger.warn('++++ sent to kafka topic: {}'.format(kafka_topic))
 
         except Exception as e:
             self.logger.exception(e)
