@@ -1,14 +1,11 @@
-from kafka import KafkaProducer
 import json
 import boto3
 import argparse
 import logging
 import urllib
+from customizations import store, custom_args
+import sys
 
-logger = logging.getLogger('sqs_observer')
-logger.setLevel(logging.DEBUG)
-ch = logging.StreamHandler()
-logger.addHandler(ch)
 
 # Boto3 will check these environment variables for credentials:
 # AWS_ACCESS_KEY_ID The access key for your AWS account.
@@ -19,16 +16,6 @@ logger.addHandler(ch)
 #  python sqs_consumer.py
 # mainipulate the bucket via
 # AWS_ACCESS_KEY_ID=. AWS_SECRET_ACCESS_KEY=. aws s3 cp text  s3://dos-testing
-
-
-def to_kafka(args, payload):
-    """ write dict to kafka """
-    producer = KafkaProducer(bootstrap_servers=args.kafka_bootstrap)
-    key = '{}~{}'.format(payload['system_metadata']['event_type'],
-                         payload['urls'][0])
-    producer.send(args.kafka_topic, key=key, value=json.dumps(payload))
-    producer.flush()
-    logger.debug('sent to kafka topic: {}'.format(args.kafka_topic))
 
 
 def process(args, message):
@@ -54,19 +41,27 @@ def process(args, message):
             s3["bucket"]["ownerIdentity"]["principalId"]
         system_metadata['event_type'] = record["eventName"]
         obj = s3['object']
-        
+
         user_metadata = {}
         if not system_metadata['event_type'] == "ObjectRemoved:Delete":
-            head = client.head_object(Bucket=s3['bucket']['name'],
-                                      Key=obj['key'])
-            user_metadata = head['Metadata'] if ('Metadata' in head) else None
+            try:
+                head = client.head_object(Bucket=s3['bucket']['name'],
+                                          Key=obj['key'])
+                user_metadata = head['Metadata'] if ('Metadata' in head) else None
+            except Exception as e:
+                logger.info("head failed. {} {} {}".format(s3['bucket']['name'], obj['key'], e))
 
         _id = urllib.quote_plus(obj['key'])
-        _urls = ["s3://{}.s3-{}.amazonaws.com/{}".format(
+        _url = "s3://{}.s3-{}.amazonaws.com/{}".format(
                   system_metadata['bucket_name'],
                   record['awsRegion'],
                   _id
-                  )]
+                  )
+        _url = {
+            'url': _url,
+            "system_metadata": system_metadata,
+            "user_metadata": user_metadata,
+        }
         data_object = {
           "id": _id,
           "file_size": obj.get('size', None),
@@ -75,14 +70,12 @@ def process(args, message):
           "updated": record['eventTime'],
           # TODO multipart ...
           # https://forums.aws.amazon.com/thread.jspa?messageID=203436&#203436
-          "checksum": obj.get('eTag', None),
+          "checksums": [{'checksum': obj.get('eTag', None), 'type': 'md5'}],
           # http://docs.aws.amazon.com/AmazonS3/latest/dev/UsingBucket.html#access-bucket-intro
-          "urls": _urls,
-          "system_metadata": system_metadata,
-          "user_metadata": user_metadata
+          "urls": [_url],
         }
         logger.debug(json.dumps(data_object))
-        to_kafka(args, data_object)
+        store(args, data_object)
     return True
 
 
@@ -109,21 +102,27 @@ def consume(args):
 
 def populate_args(argparser):
     """add arguments we expect """
-    argparser.add_argument('--kafka_topic', '-kt',
-                           help='''kafka_topic''',
-                           default='s3-topic')
-
-    argparser.add_argument('--kafka_bootstrap', '-kb',
-                           help='''kafka host:port''',
-                           default='localhost:9092')
 
     argparser.add_argument('--sqs_queue_name', '-qn',
                            help='''sqs queue name''',
                            default='dos-testing')
+    argparser.add_argument("-v", "--verbose", help="increase output verbosity",
+                           default=False,
+                           action="store_true")
+    argparser.add_argument('--dry_run', '-d',
+                           help='''dry run''',
+                           default=False,
+                           action='store_true')
+    custom_args(argparser)
 
 if __name__ == '__main__':  # pragma: no cover
     argparser = argparse.ArgumentParser(
-        description='Consume events from aws s3, populate kafka')
+        description='Consume events from aws s3, populate store')
     populate_args(argparser)
     args = argparser.parse_args()
+    if args.verbose:
+        logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+    else:
+        logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+    logger = logging.getLogger(__name__)
     consume(args)

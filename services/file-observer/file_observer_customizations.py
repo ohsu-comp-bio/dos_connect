@@ -1,7 +1,9 @@
+from kafka import KafkaProducer
 import os
 import hashlib
 import re
-
+import logging
+from customizations import store, custom_args
 
 """ """
 all_checksums = {}
@@ -9,7 +11,7 @@ try:
     all_checksums = open('SMMARTData/all_checksums.tsv').read().split()
     all_checksums = dict(zip(all_checksums[0::2], all_checksums[1::2]))
 except Exception as e:
-    print("**** could not open 'SMMARTData/all_checksums.tsv'", e)
+    print("WARN could not open 'SMMARTData/all_checksums.tsv'")
 
 
 def user_metadata(full_path):
@@ -29,6 +31,7 @@ def md5sum(full_path, url, blocksize=65536, md5filename='md5sum.txt'):
     """ lookup md5 in local file, or compute it on the fly
         url is provided to lookup from cache
     """
+    logger = logging.getLogger(__name__)
     # since md5filename only found in `real` directory, use that
     orig_path = full_path
     full_path = os.path.realpath(full_path)
@@ -45,10 +48,14 @@ def md5sum(full_path, url, blocksize=65536, md5filename='md5sum.txt'):
     if url in all_checksums:
         return all_checksums[url]
     hash = hashlib.md5()
-    with open(full_path, "rb") as f:
-        # print("*** all_checksums {}".format(len(all_checksums.keys())))
-        # print("*** url not found in cache {}".format(url))
-        print("*** calculating hash for {} {}".format(full_path, orig_path))
-        for block in iter(lambda: f.read(blocksize), b""):
-            hash.update(block)
-    return hash.hexdigest()
+    try:
+        with open(full_path, "rb") as f:
+            logger.info("*** calculating hash for {} {}".format(full_path,
+                                                          orig_path))
+            for block in iter(lambda: f.read(blocksize), b""):
+                hash.update(block)
+        return hash.hexdigest()
+    except Exception as e:
+        logger.warn("**** could not open {}".format(full_path))
+        logger.exception(e)
+        return None

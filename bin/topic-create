@@ -3,6 +3,6 @@ echo "## Creating $1"
 docker run \
   --net=host \
   --rm \
-  confluentinc/cp-kafka:3.3.0 \
-  kafka-topics --create --topic $1 --partitions 1 --replication-factor 1 --if-not-exists --zookeeper $KAFKA_ZOOKEEPER_CONNECT > /dev/null
-
+  landoop/fast-data-dev  \
+  kafka-topics --create --topic $1 --partitions 1 --replication-factor 1 --if-not-exists \
+  --zookeeper $KAFKA_ZOOKEEPER_CONNECT

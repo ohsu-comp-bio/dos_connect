@@ -6,7 +6,13 @@ import argparse
 import logging
 import sys
 
-logger = logging.getLogger('elastic_sink')
+
+
+def get_id(value):
+    """ get the md5 checksum as the id """
+    for checksum in value['checksums']:
+        if checksum['type'] == 'md5':
+            return checksum['checksum']
 
 
 class ElasticHandler(object):
@@ -60,19 +66,15 @@ class ElasticHandler(object):
     def update_elastic(self, key, value):
         """ update dict to elastic"""
         es = self._es
-        checksum = value['checksums'][0]['checksum']
-        doc = es.get(index='dos', doc_type='dos', id=checksum)
+        doc = es.get(index='dos', doc_type='dos', id=get_id(value))
         existing_urls = doc['_source']['urls']
         new_urls = value['urls']
-        # existing_metadata = doc['_source']['user_metadata']
-        # new_metadata = value['user_metadata']
-        # new_metadata.update(existing_metadata)
+        updated_urls = new_urls + [u for u in existing_urls if u['url'] not in [n['url'] for n in new_urls]]
         es.update(index='dos', doc_type='dos',
-                  id=checksum,
+                  id=get_id(value),
                   body={
                     'doc': {
-                        'urls': existing_urls + new_urls,
-                        # 'user_metadata': new_metadata,
+                        'urls': updated_urls,
                         }
                   })
 
@@ -94,7 +96,7 @@ class ElasticHandler(object):
                 logger.debug(del_rsp)
         else:
             es.create(index='dos', doc_type='dos',
-                      id=checksum, body=value)
+                      id=get_id(value), body=value)
 
 
 if __name__ == "__main__":
@@ -128,11 +130,35 @@ if __name__ == "__main__":
                            default=False,
                            action='store_true')
 
+    argparser.add_argument('--no_tls',
+                           help='kafka connection plaintext? default: False',
+                           default=False,
+                           action='store_true')
+
+    argparser.add_argument('--ssl_cafile',
+                           help='server CA pem file',
+                           default='/client-certs/CARoot.pem')
+
+    argparser.add_argument('--ssl_certfile',
+                           help='client certificate pem file',
+                           default='/client-certs/certificate.pem')
+
+    argparser.add_argument('--ssl_keyfile',
+                           help='client private key pem file',
+                           default='/client-certs/key.pem')
+
+    argparser.add_argument("-v", "--verbose", help="increase output verbosity",
+                           default=False,
+                           action="store_true")
+
     args = argparser.parse_args()
-    logger.setLevel(logging.DEBUG)
-    ch = logging.StreamHandler()
-    logger.addHandler(ch)
-    logger.debug(args)
+
+    if args.verbose:
+        logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+    else:
+        logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+
+    logger = logging.getLogger(__name__)
 
     event_handler = ElasticHandler(
         elastic_url=args.elastic_url,
@@ -140,12 +166,26 @@ if __name__ == "__main__":
     )
 
     # To consume latest messages and auto-commit offsets
-    consumer = KafkaConsumer(args.kafka_topic,
-                             group_id=args.group_id,
-                             bootstrap_servers=[args.kafka_bootstrap],
-                             # consumer_timeout_ms=10000,
-                             auto_offset_reset='earliest',
-                             enable_auto_commit=args.enable_auto_commit)
+    if not args.no_tls:
+        consumer = KafkaConsumer(args.kafka_topic,
+                                 group_id=args.group_id,
+                                 bootstrap_servers=[args.kafka_bootstrap],
+                                 # consumer_timeout_ms=10000,
+                                 auto_offset_reset='earliest',
+                                 enable_auto_commit=args.enable_auto_commit,
+                                 security_protocol='SSL',
+                                 ssl_check_hostname=False,
+                                 ssl_cafile=args.ssl_cafile,
+                                 ssl_certfile=args.ssl_certfile,
+                                 ssl_keyfile=args.ssl_keyfile)
+    else:
+        consumer = KafkaConsumer(args.kafka_topic,
+                                 group_id=args.group_id,
+                                 bootstrap_servers=[args.kafka_bootstrap],
+                                 # consumer_timeout_ms=10000,
+                                 auto_offset_reset='earliest',
+                                 enable_auto_commit=args.enable_auto_commit)
+
     for message in consumer:
         # message value and key are raw bytes -- decode if necessary!
         # e.g., for unicode: `message.value.decode('utf-8')`
@@ -156,3 +196,4 @@ if __name__ == "__main__":
         sys.stderr.write('.')
         sys.stderr.flush()
         event_handler.on_any_event(message.key, json.loads(message.value))
+

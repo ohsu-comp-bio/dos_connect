@@ -3,6 +3,5 @@ echo "## Deleting $1"
 docker run \
   --net=host \
   --rm \
-  confluentinc/cp-kafka:3.3.0 \
-  kafka-topics --delete --topic $1 --if-exists --zookeeper $KAFKA_ZOOKEEPER_CONNECT
-
+  landoop/fast-data-dev  \
+  kafka-topics --delete --topic $1 --zookeeper $KAFKA_ZOOKEEPER_CONNECT

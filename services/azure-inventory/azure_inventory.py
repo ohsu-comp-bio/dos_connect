@@ -1,4 +1,3 @@
-from kafka import KafkaProducer
 from azure.storage.blob import BlockBlobService
 from azure.common import AzureException
 # https://docs.microsoft.com/en-us/azure/storage/blobs/storage-blob-event-overview
@@ -17,6 +16,9 @@ import sys
 import datetime
 import attr
 
+from customizations import store, custom_args
+
+
 logger = logging.getLogger('azure-inventory')
 logger.setLevel(logging.DEBUG)
 ch = logging.StreamHandler()
@@ -30,22 +32,6 @@ block_blob_service = BlockBlobService(
 
 # container info
 containers = {}
-
-
-def to_kafka(args, payload):
-    """ write dict to kafka """
-    key = '{}~{}'.format(payload['system_metadata']['eventType'],
-                         payload['urls'][0])
-
-    if not args.dry_run:
-        producer = KafkaProducer(bootstrap_servers=args.kafka_bootstrap)
-        producer.send(args.kafka_topic, key=key, value=json.dumps(payload))
-        producer.flush()
-        logger.debug('sent to kafka topic: {}  {}'
-                     .format(args.kafka_topic, key))
-    else:
-        logger.debug('dry_run to kafka topic: {} {}'
-                     .format(args.kafka_topic, key))
 
 
 def process(args, blob):
@@ -112,7 +98,7 @@ def process(args, blob):
     }
 
     logger.debug(json.dumps(data_object))
-    to_kafka(args, data_object)
+    store(args, data_object)
     return True
 
 
@@ -146,11 +132,21 @@ def populate_args(argparser):
                            default=False,
                            action='store_true')
 
+    argparser.add_argument("-v", "--verbose", help="increase output verbosity",
+                           default=False,
+                           action="store_true")
+    custom_args(argparser)
+
 
 if __name__ == '__main__':  # pragma: no cover
     argparser = argparse.ArgumentParser(
         description='Consume blobs from azure blob container, populate kafka')
     populate_args(argparser)
     args = argparser.parse_args()
+    if args.verbose:
+        logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+    else:
+        logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+    logger = logging.getLogger(__name__)
     logger.debug(args)
     consume(args)

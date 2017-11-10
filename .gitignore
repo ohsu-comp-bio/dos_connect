@@ -19,6 +19,11 @@ volumes/
 # test data
 SMMARTData
 
+# all pem and jks keystores
+*.pem
+*.jks
+*.p12
+
 # Distribution / packaging
 .Python
 env/
