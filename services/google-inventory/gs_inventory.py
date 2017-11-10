@@ -38,7 +38,7 @@ def process(args, bucket, record):
       "created": record['timeCreated'],
       "updated": record['updated'],
       # TODO multipart ...
-      "checksums": {"checksum": record['md5Hash'], 'type': 'md5'},
+      "checksums": [{"checksum": record['md5Hash'], 'type': 'md5'}],
       "urls": _urls
     }
     # logger.debug(system_metadata.__class__)
