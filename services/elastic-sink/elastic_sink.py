@@ -47,22 +47,20 @@ class ElasticHandler(object):
 
     def decorate_metadata(self, key, value):
         """ update dos user_metadata with complete meta data """
-        if 'user_metadata' in value and \
-                'patient_id' in value['user_metadata'] and \
-                'library_id' in value['user_metadata']:
+        url = value['urls'][0]
+        if 'user_metadata' in url and \
+                'patient_id' in url['user_metadata'] and \
+                'library_id' in url['user_metadata']:
             es = self._es
-            patient_id = value['user_metadata']['patient_id']
-            library_id = value['user_metadata']['library_id']
+            patient_id = url['user_metadata']['patient_id']
+            library_id = url['user_metadata']['library_id']
             res = es.search(index='dos', doc_type='meta',
                             q='patient_id:\"{}\" AND '
                             'library_id:\"{}\"'
                             .format(patient_id, library_id))
             doc = res['hits']['hits'][0]
             meta = doc['_source']
-            user_metadata = value['user_metadata']
-            for key in meta.keys():
-                if key not in user_metadata:
-                    user_metadata[key] = meta[key]
+            value['project_metadata'] = meta
         return value
 
     def update_elastic(self, key, value):
@@ -86,6 +84,7 @@ class ElasticHandler(object):
             logger.debug(key)
             logger.debug(value)
             return
+        checksum = value['checksums'][0]['checksum']
         es = self._es
         if key.startswith('ObjectRemoved'):
             logger.debug(key)
