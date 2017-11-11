@@ -1,0 +1,4 @@
+echo 'testing'  > /tmp/testing.txt
+aws s3 cp --metadata foo=bar /tmp/testing.txt s3://$AWS_TEST_BUCKET
+sleep 10 
+aws s3 rm s3://$AWS_TEST_BUCKET/testing.txt

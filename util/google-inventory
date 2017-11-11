@@ -1,0 +1,7 @@
+docker run --rm \
+  --network=host \
+  -v $(pwd)/volumes/client-certs:/client-certs \
+  -e GOOGLE_APPLICATION_CREDENTIALS=/google-auth.json \
+  google-inventory:latest   python gs_inventory.py \
+  --kafka_topic $KAFKA_DOS_TOPIC --kafka_bootstrap $KAFKA_BOOTSTRAP_SERVERS --verbose \
+  $GS_TEST_BUCKET

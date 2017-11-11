@@ -1,0 +1,5 @@
+echo 'testing'  > volumes/files/testing.txt
+# the swift cli command does not allow for adding metadata on upload, creates a second 'ObjectModified' event
+docker-compose exec swift bash -c "swift -A http://127.0.0.1:8080/auth/v1.0 -U test:tester -K testing  upload $SWIFT_TEST_BUCKET /files/testing.txt"
+docker-compose exec swift bash -c "swift -A http://127.0.0.1:8080/auth/v1.0 -U test:tester -K testing  post --meta foo:bar $SWIFT_TEST_BUCKET files/testing.txt"
+docker-compose exec swift bash -c "swift -A http://127.0.0.1:8080/auth/v1.0 -U test:tester -K testing  delete $SWIFT_TEST_BUCKET files/testing.txt"

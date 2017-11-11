@@ -1,0 +1,4 @@
+DATE=`date '+%Y%m%d%H%M%S'`
+AZURE_STORAGE_ACCOUNT=$BLOB_STORAGE_ACCOUNT \
+AZURE_STORAGE_KEY=$BLOB_STORAGE_ACCESS_KEY \
+az storage blob upload -f /tmp/testing.txt -c dos-testing -n testing-$DATE.txt --metadata foo=bar 
