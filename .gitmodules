@@ -1,0 +1,3 @@
+[submodule "services/fast-data-dev"]
+	path = services/fast-data-dev
+	url = git@github.com:ohsu-comp-bio/fast-data-dev.git

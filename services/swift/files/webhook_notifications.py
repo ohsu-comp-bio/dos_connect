@@ -40,6 +40,9 @@ from kafka import KafkaProducer
 import urllib
 import socket
 
+_PRODUCER = None
+
+
 class WebHookContext(wsgi.WSGIContext):
     def __init__(self, app, notifier):
         wsgi.WSGIContext.__init__(self, app)
@@ -184,6 +187,30 @@ class WebHookContext(wsgi.WSGIContext):
         return response
 
 
+def _producer(conf):
+    """ create a connection """
+    global _PRODUCER
+    kafka_topic = conf.get('kafka_topic', None)
+    kafka_bootstrap = conf.get('kafka_bootstrap', None)
+    ssl_cafile = conf.get('ssl_cafile', None)
+    ssl_certfile = conf.get('ssl_certfile', None)
+    ssl_keyfile = conf.get('ssl_keyfile', None)
+    no_tls = conf.get('no_tls', False)
+
+    if not _PRODUCER:
+#         if not no_tls:
+#             _PRODUCER = KafkaProducer(bootstrap_servers=kafka_bootstrap,
+#                                       security_protocol='SSL',
+#                                       ssl_check_hostname=False,
+#                                       ssl_cafile=ssl_cafile,
+#                                       ssl_certfile=ssl_certfile,
+#                                       ssl_keyfile=ssl_keyfile)
+#         else:
+        _PRODUCER = KafkaProducer(bootstrap_servers=kafka_bootstrap)
+
+    return _PRODUCER
+
+
 class LoggingNotifier(object):
     def __init__(self, logger, conf):
         self.logger = logger
@@ -212,6 +239,11 @@ class LoggingNotifier(object):
 
         _url = "s3://{}/{}/{}".format(socket.gethostname(),
                                       swift['container'], _id)
+        _url = {
+            'url': _url,
+            "system_metadata": system_metadata,
+            "user_metadata": user_metadata
+        }
 
         if swift['event_type'] == 'ObjectRemoved:Delete' or swift['event_type'] == 'ObjectMetadata':
             data_object = {
@@ -226,10 +258,8 @@ class LoggingNotifier(object):
               "file_size": swift['content-length'],
               "created": swift['updated_at'],
               "updated": swift['updated_at'],
-              "checksum": swift['etag'],
+              "checksums": [{'checksum': swift['etag'], 'type': 'md5'}],
               "urls": [_url],
-              "system_metadata": system_metadata,
-              "user_metadata": user_metadata
             }
         return data_object
 
@@ -238,12 +268,10 @@ class LoggingNotifier(object):
             payload['event_type'] = event_type
             api_url = self.conf.get('api_url', None)
             kafka_topic = self.conf.get('kafka_topic', None)
-            kafka_bootstrap = self.conf.get('kafka_bootstrap', None)
             # self.logger.debug('event_type:{}'.format(event_type))
             # self.logger.debug(payload)
             # self.logger.debug('api_url:{}'.format(api_url))
-            # self.logger.debug('kafka_topic:{}'.format(kafka_topic))
-            # self.logger.debug('kafka_bootstrap:{}'.format(kafka_bootstrap))
+            self.logger.debug('kafka_topic:{}'.format(kafka_topic))
             if api_url:
                 r = requests.post(api_url,
                                   data=json.dumps(payload),
@@ -253,13 +281,13 @@ class LoggingNotifier(object):
                 self.logger.debug(r.content)
             if kafka_topic:
                 """ write dict to kafka """
-                producer = KafkaProducer(bootstrap_servers=kafka_bootstrap)
+                producer = _producer(self.conf)
                 payload = self.to_data_object(payload)
-                key = '{}~{}'.format(payload['system_metadata']['event_type'],
-                                     payload['urls'][0])
+                key = '{}~{}'.format(payload['urls'][0]['system_metadata']['event_type'],
+                                     payload['urls'][0]['url'])
                 producer.send(kafka_topic, key=key, value=json.dumps(payload))
                 producer.flush()
-                self.logger.debug('sent to kafka topic: {}'.format(kafka_topic))
+                self.logger.warn('++++ sent to kafka topic: {}'.format(kafka_topic))
 
         except Exception as e:
             self.logger.exception(e)

@@ -2,60 +2,37 @@
 version: '2'
 services:
 
-  # core service required by kafka
-  zookeeper:
-    image: confluentinc/cp-zookeeper:latest
-    network_mode: host
-    environment:
-      ZOOKEEPER_CLIENT_PORT: ${ZOOKEEPER_CLIENT_PORT}
-      ZOOKEEPER_TICK_TIME: 2000
-
   # core service
   kafka:
-    image: confluentinc/cp-kafka:latest
+    build:
+      context: services/fast-data-dev
     network_mode: host
-    depends_on:
-      - zookeeper
+    volumes:
+      # https://github.com/Landoop/fast-data-dev/issues/37
+      - "./volumes/kafka:/tmp"
     environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: ${KAFKA_ZOOKEEPER_CONNECT}
-      KAFKA_ADVERTISED_LISTENERS: ${KAFKA_ADVERTISED_LISTENERS}
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_DELETE_TOPIC_ENABLE: "true"
+      ADV_HOST: ${ADV_HOST}
+      ENABLE_SSL: ${ENABLE_SSL}
+      WEB_PORT: ${WEB_PORT}
+      # CONNECT_PORT: ${CONNECT_PORT}
+      REGISTRY_PORT: ${REGISTRY_PORT}
+      USER: ${KAFKA_UI_USER}
+      PASSWORD: ${KAFKA_UI_PASSWORD}
+      BROKER_SSL_PORT: ${BROKER_SSL_PORT}
 
-  # core service provide a rest endpoint to kafka
-  kafka-rest:
-    image: confluentinc/cp-kafka-rest:3.3.0
-    network_mode: host
-    depends_on:
-      - zookeeper
-      - kafka
-    environment:
-      KAFKA_REST_ZOOKEEPER_CONNECT: ${KAFKA_REST_ZOOKEEPER_CONNECT}
-      KAFKA_REST_LISTENERS: ${KAFKA_REST_LISTENERS}
-      KAFKA_REST_HOST_NAME: ${KAFKA_REST_HOST_NAME}
-      KAFKA_REST_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
 
-  # devops service: provide a ui to examine kafka topics
-  ui:
-    image: landoop/kafka-topics-ui
-    ports:
-      - "${KAFKA_TOPIC_UI_PORT}:${KAFKA_TOPIC_UI_PORT}"
-    network_mode: host
-    environment:
-      - KAFKA_REST_PROXY_URL=${KAFKA_REST_LISTENERS}
-      - PROXY=true
-
-  # user service: swift instance with our webhook
   swift:
     build:
       context: services/swift
     ports:
+      # coordinate with services/swift/files/proxy-server.conf
       - "${SWIFT_PORT}:${SWIFT_PORT}"
     network_mode: host
     volumes:
       # For testing from host
       - "./volumes/files:/files"
+      # client side certs and keys
+      - "./volumes/client-certs:/client-certs"
     environment:
       # TODO do env subsitute
       # coordinate with services/swift/files/proxy-server.conf
@@ -69,8 +46,10 @@ services:
     build:
       context: services/aws-observer
     depends_on:
-      - zookeeper
       - kafka
+    volumes:
+      # client side certs and keys
+      - "./volumes/client-certs:/client-certs"
     network_mode: host
     environment:
       - KAFKA_TOPIC=${KAFKA_DOS_TOPIC}
@@ -79,13 +58,16 @@ services:
       - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - OBSERVER_PARMS=--verbose
 
   # user service: monitor aws SQS queue
   google-observer:
     build:
       context: services/google-observer
+    volumes:
+      # client side certs and keys
+      - "./volumes/client-certs:/client-certs"
     depends_on:
-      - zookeeper
       - kafka
     network_mode: host
     environment:
@@ -98,8 +80,10 @@ services:
   azure-observer:
     build:
       context: services/azure-observer
+    volumes:
+      # client side certs and keys
+      - "./volumes/client-certs:/client-certs"
     depends_on:
-      - zookeeper
       - kafka
     network_mode: host
     environment:
@@ -116,25 +100,30 @@ services:
   file-observer:
     build:
       context: services/file-observer
+    volumes:
     network_mode: host
     depends_on:
-      - zookeeper
       - kafka
     volumes:
+      #  test directory to observe
       - "./volumes/files:/files"
+      # client side certs and keys
+      - "./volumes/client-certs:/client-certs"
     environment:
       - KAFKA_TOPIC=${KAFKA_DOS_TOPIC}
       - KAFKA_BOOTSTRAP=${KAFKA_BOOTSTRAP_SERVERS}
       - MONITOR_DIRECTORY=/files
-
+      - OBSERVER_PARMS=--verbose
 
   # user service: monitor topic, write to elastic
   elastic-sink:
     build:
       context: services/elastic-sink
+    volumes:
+      # client side certs and keys
+      - "./volumes/client-certs:/client-certs"
     network_mode: host
     depends_on:
-      - zookeeper
       - kafka
       - elastic
     environment:

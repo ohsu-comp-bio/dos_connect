@@ -1,5 +1,6 @@
 docker run --rm \
   --network=host \
+  -v $(pwd)/volumes/client-certs:/client-certs \
   -e AWS_ACCESS_KEY_ID=$SWIFT_ACCESS_KEY_ID \
   -e AWS_SECRET_ACCESS_KEY=$SWIFT_SECRET_ACCESS_KEY \
   s3-inventory:latest   python s3_inventory.py \

@@ -8,32 +8,14 @@ import logging
 import urllib
 import time
 import pprint
-
-logger = logging.getLogger('pubsub-notifications')
-logger.setLevel(logging.DEBUG)
-ch = logging.StreamHandler()
-logger.addHandler(ch)
+from customizations import store, custom_args
+import sys
 
 
 # Instantiates a client
 storage_client = storage.Client()
 # bucket info
 buckets = {}
-
-
-def to_kafka(args, payload):
-    """ write dict to kafka """
-    key = '{}~{}'.format(payload['system_metadata']['eventType'],
-                         payload['urls'][0])
-
-    if not args.dry_run:
-        producer = KafkaProducer(bootstrap_servers=args.kafka_bootstrap)
-        producer.send(args.kafka_topic, key=key, value=json.dumps(payload))
-        producer.flush()
-        logger.debug('sent to kafka topic: {}'.format(args.kafka_topic))
-    else:
-        logger.debug('dry_run to kafka topic: {} {}'
-                     .format(args.kafka_topic, key))
 
 
 def process(args, message):
@@ -92,12 +74,15 @@ def process(args, message):
         'OBJECT_FINALIZE': 'ObjectCreated:Put',
         'OBJECT_METADATA_UPDATE': 'ObjectModified'
     }
-    system_metadata['eventType'] = event_methods[system_metadata['eventType']]
+    system_metadata['event_type'] = event_methods[system_metadata['eventType']]
 
     user_metadata = record.get('metadata', None)
 
     _id = record['id']
-    _urls = [record['mediaLink']]
+    _urls = [{'url': record['mediaLink'],
+              'system_metadata': system_metadata,
+              'user_metadata': user_metadata
+              }]
     data_object = {
       "id": _id,
       "file_size": int(record['size']),
@@ -105,17 +90,15 @@ def process(args, message):
       "updated": record['updated'],
       # TODO multipart ...
       # https://cloud.google.com/storage/docs/hashes-etags#_MD5
-      "checksum": record['md5Hash'],
-      "urls": _urls,
-      "system_metadata": system_metadata,
-      "user_metadata": user_metadata
+      "checksums": [{"checksum": record['md5Hash'], 'type': 'md5'}],
+      "urls": _urls
     }
     # logger.debug(system_metadata.__class__)
     # logger.debug(type(system_metadata))
     # pp = pprint.PrettyPrinter(indent=2)
     # pp.pprint(system_metadata)
     logger.debug(json.dumps(data_object))
-    to_kafka(args, data_object)
+    store(args, data_object)
     return True
 
 
@@ -165,13 +148,6 @@ def consume(args):
 
 def populate_args(argparser):
     """add arguments we expect """
-    argparser.add_argument('--kafka_topic', '-kt',
-                           help='''kafka_topic''',
-                           default='s3-topic')
-
-    argparser.add_argument('--kafka_bootstrap', '-kb',
-                           help='''kafka host:port''',
-                           default='localhost:9092')
 
     argparser.add_argument('--google_cloud_project', '-kp',
                            help='project id',
@@ -189,6 +165,12 @@ def populate_args(argparser):
                            help='''dry run''',
                            default=False,
                            action='store_true')
+    
+    argparser.add_argument("-v", "--verbose", help="increase output verbosity",
+                           default=False,
+                           action="store_true")
+
+    custom_args(argparser)
 
 
 if __name__ == '__main__':  # pragma: no cover
@@ -196,4 +178,10 @@ if __name__ == '__main__':  # pragma: no cover
         description='Consume events from aws s3, populate kafka')
     populate_args(argparser)
     args = argparser.parse_args()
+    if args.verbose:
+        logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+    else:
+        logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+    logger = logging.getLogger(__name__)
+
     consume(args)

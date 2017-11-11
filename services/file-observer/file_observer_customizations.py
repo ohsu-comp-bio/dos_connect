@@ -1,7 +1,9 @@
+from kafka import KafkaProducer
 import os
 import hashlib
 import re
-
+import logging
+from customizations import store, custom_args
 
 """ """
 all_checksums = {}
@@ -9,10 +11,11 @@ try:
     all_checksums = open('SMMARTData/all_checksums.tsv').read().split()
     all_checksums = dict(zip(all_checksums[0::2], all_checksums[1::2]))
 except Exception as e:
-    print("**** could not open 'SMMARTData/all_checksums.tsv'", e)
+    print("WARN could not open 'SMMARTData/all_checksums.tsv'")
 
 
-def user_metadata(full_path):
+
+def _metadata(full_path):
     """ return user meta data """
     parts = full_path.split('/')
     meta = {}
@@ -25,10 +28,38 @@ def user_metadata(full_path):
     return meta
 
 
+def _hash_metadata(metadata):
+    for k in metadata.keys():
+        hash = hashlib.md5()
+        hash.update(metadata[k])
+        metadata[k] =  hash.hexdigest()
+    return metadata
+
+def user_metadata(full_path):
+    return  _hash_metadata(_metadata(full_path))
+
+
+def before_store(args, data_object):
+    logger = logging.getLogger(__name__)
+    url = data_object['urls'][0]['url']
+    id = data_object['id']
+    clear = _metadata(url)
+    obscure = user_metadata(url)
+    for k in clear.keys():
+        url = url.replace(clear[k], obscure[k])
+        id = id.replace(clear[k], obscure[k])
+    data_object['id'] = id
+    data_object['urls'][0]['url'] = url
+    logger.debug('before_store')
+    logger.debug(data_object)
+    return data_object
+
+
 def md5sum(full_path, url, blocksize=65536, md5filename='md5sum.txt'):
     """ lookup md5 in local file, or compute it on the fly
         url is provided to lookup from cache
     """
+    logger = logging.getLogger(__name__)
     # since md5filename only found in `real` directory, use that
     orig_path = full_path
     full_path = os.path.realpath(full_path)
@@ -45,10 +76,15 @@ def md5sum(full_path, url, blocksize=65536, md5filename='md5sum.txt'):
     if url in all_checksums:
         return all_checksums[url]
     hash = hashlib.md5()
-    with open(full_path, "rb") as f:
-        print("*** all_checksums {}".format(len(all_checksums.keys())))
-        print("*** url not found in cache {}".format(url))
-        print("*** calculating hash for {} {}".format(full_path, orig_path))
-        for block in iter(lambda: f.read(blocksize), b""):
-            hash.update(block)
-    return hash.hexdigest()
+    try:
+        with open(full_path, "rb") as f:
+            logger.info("*** calculating hash for {} {}".format(full_path,
+                                                          orig_path))
+            for block in iter(lambda: f.read(blocksize), b""):
+                hash.update(block)
+        return hash.hexdigest()
+    except Exception as e:
+        logger.warn("**** could not open {}".format(full_path))
+        logger.exception(e)
+        return None
+

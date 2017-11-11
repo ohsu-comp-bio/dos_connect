@@ -1,4 +1,3 @@
-from kafka import KafkaProducer
 from azure.storage.blob import BlockBlobService
 from azure.common import AzureException
 # https://docs.microsoft.com/en-us/azure/storage/blobs/storage-blob-event-overview
@@ -17,6 +16,9 @@ import sys
 import datetime
 import attr
 
+from customizations import store, custom_args
+
+
 logger = logging.getLogger('azure-inventory')
 logger.setLevel(logging.DEBUG)
 ch = logging.StreamHandler()
@@ -30,22 +32,6 @@ block_blob_service = BlockBlobService(
 
 # container info
 containers = {}
-
-
-def to_kafka(args, payload):
-    """ write dict to kafka """
-    key = '{}~{}'.format(payload['system_metadata']['eventType'],
-                         payload['urls'][0])
-
-    if not args.dry_run:
-        producer = KafkaProducer(bootstrap_servers=args.kafka_bootstrap)
-        producer.send(args.kafka_topic, key=key, value=json.dumps(payload))
-        producer.flush()
-        logger.debug('sent to kafka topic: {}  {}'
-                     .format(args.kafka_topic, key))
-    else:
-        logger.debug('dry_run to kafka topic: {} {}'
-                     .format(args.kafka_topic, key))
 
 
 def process(args, blob):
@@ -86,7 +72,6 @@ def process(args, blob):
     #                                 container)
 
     _id = url
-    _urls = [url]
 
     system_metadata = {}
     for field in ['server_encrypted', 'blob_type', 'blob_tier_inferred',
@@ -96,7 +81,8 @@ def process(args, blob):
         if val:
             system_metadata[field] = val
 
-    system_metadata['eventType'] = 'ObjectCreated:Put'
+    system_metadata['event_type'] = 'ObjectCreated:Put'
+    _urls = [{'url': url, 'system_metadata': system_metadata }]
 
     last_modified = str(blob.properties.last_modified).replace(' ', 'T')
     data_object = {
@@ -105,14 +91,14 @@ def process(args, blob):
       "created": last_modified,
       "updated": last_modified,
       # TODO check multipart md5 ?
-      "checksum": blob.properties.content_settings.content_md5,
+      "checksums": [{"checksum": blob.properties.content_settings.content_md5, 'type': 'md5'}],
       "urls": _urls,
       "system_metadata": system_metadata,
       "user_metadata": blob.metadata
     }
 
     logger.debug(json.dumps(data_object))
-    to_kafka(args, data_object)
+    store(args, data_object)
     return True
 
 
@@ -129,13 +115,6 @@ def consume(args):
 
 def populate_args(argparser):
     """add arguments we expect """
-    argparser.add_argument('--kafka_topic', '-kt',
-                           help='''kafka_topic''',
-                           default='dos-topic')
-
-    argparser.add_argument('--kafka_bootstrap', '-kb',
-                           help='''kafka host:port''',
-                           default='localhost:9092')
 
     argparser.add_argument('--azure_container', '-ac',
                            help='azure container name',
@@ -146,11 +125,21 @@ def populate_args(argparser):
                            default=False,
                            action='store_true')
 
+    argparser.add_argument("-v", "--verbose", help="increase output verbosity",
+                           default=False,
+                           action="store_true")
+    custom_args(argparser)
+
 
 if __name__ == '__main__':  # pragma: no cover
     argparser = argparse.ArgumentParser(
         description='Consume blobs from azure blob container, populate kafka')
     populate_args(argparser)
     args = argparser.parse_args()
+    if args.verbose:
+        logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+    else:
+        logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+    logger = logging.getLogger(__name__)
     logger.debug(args)
     consume(args)

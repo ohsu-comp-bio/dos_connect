@@ -1,6 +1,7 @@
 docker run --rm \
   --network=host \
   -v $(pwd)/volumes/files:$MONITOR_DIRECTORY \
+  -v $(pwd)/volumes/client-certs:/client-certs \
   file-inventory:latest   python file_observer.py \
   --kafka_topic $KAFKA_DOS_TOPIC --kafka_bootstrap $KAFKA_BOOTSTRAP_SERVERS --inventory \
   $MONITOR_DIRECTORY
