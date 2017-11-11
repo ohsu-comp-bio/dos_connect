@@ -72,7 +72,6 @@ def process(args, blob):
     #                                 container)
 
     _id = url
-    _urls = [url]
 
     system_metadata = {}
     for field in ['server_encrypted', 'blob_type', 'blob_tier_inferred',
@@ -82,7 +81,8 @@ def process(args, blob):
         if val:
             system_metadata[field] = val
 
-    system_metadata['eventType'] = 'ObjectCreated:Put'
+    system_metadata['event_type'] = 'ObjectCreated:Put'
+    _urls = [{'url': url, 'system_metadata': system_metadata }]
 
     last_modified = str(blob.properties.last_modified).replace(' ', 'T')
     data_object = {
@@ -91,7 +91,7 @@ def process(args, blob):
       "created": last_modified,
       "updated": last_modified,
       # TODO check multipart md5 ?
-      "checksum": blob.properties.content_settings.content_md5,
+      "checksums": [{"checksum": blob.properties.content_settings.content_md5, 'type': 'md5'}],
       "urls": _urls,
       "system_metadata": system_metadata,
       "user_metadata": blob.metadata
@@ -115,13 +115,6 @@ def consume(args):
 
 def populate_args(argparser):
     """add arguments we expect """
-    argparser.add_argument('--kafka_topic', '-kt',
-                           help='''kafka_topic''',
-                           default='dos-topic')
-
-    argparser.add_argument('--kafka_bootstrap', '-kb',
-                           help='''kafka host:port''',
-                           default='localhost:9092')
 
     argparser.add_argument('--azure_container', '-ac',
                            help='azure container name',

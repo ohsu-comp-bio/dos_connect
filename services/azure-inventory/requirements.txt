@@ -1,3 +1,4 @@
 kafka-python
 azure-storage-blob
 azure-storage-queue
+attrs

@@ -15,7 +15,7 @@ import argparse
 from stat import *
 import json
 import re
-from file_observer_customizations import md5sum, user_metadata
+from file_observer_customizations import md5sum, user_metadata, before_store
 from customizations import store, custom_args
 
 
@@ -81,6 +81,7 @@ class DOSHandler(PatternMatchingEventHandler):
                                       event_methods.get(event.event_type),
                                       "bucket_name": self.monitor_directory}}]
             }
+        before_store(args,data_object)
         store(args, data_object)
 
     def path2url(self, path):
@@ -179,3 +180,4 @@ if __name__ == "__main__":
         except KeyboardInterrupt:
             observer.stop()
         observer.join()
+

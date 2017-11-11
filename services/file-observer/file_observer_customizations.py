@@ -14,7 +14,8 @@ except Exception as e:
     print("WARN could not open 'SMMARTData/all_checksums.tsv'")
 
 
-def user_metadata(full_path):
+
+def _metadata(full_path):
     """ return user meta data """
     parts = full_path.split('/')
     meta = {}
@@ -25,6 +26,33 @@ def user_metadata(full_path):
         library_id = re.split('_S[0-9]_', part)[0]
         meta['library_id'] = library_id
     return meta
+
+
+def _hash_metadata(metadata):
+    for k in metadata.keys():
+        hash = hashlib.md5()
+        hash.update(metadata[k])
+        metadata[k] =  hash.hexdigest()
+    return metadata
+
+def user_metadata(full_path):
+    return  _hash_metadata(_metadata(full_path))
+
+
+def before_store(args, data_object):
+    logger = logging.getLogger(__name__)
+    url = data_object['urls'][0]['url']
+    id = data_object['id']
+    clear = _metadata(url)
+    obscure = user_metadata(url)
+    for k in clear.keys():
+        url = url.replace(clear[k], obscure[k])
+        id = id.replace(clear[k], obscure[k])
+    data_object['id'] = id
+    data_object['urls'][0]['url'] = url
+    logger.debug('before_store')
+    logger.debug(data_object)
+    return data_object
 
 
 def md5sum(full_path, url, blocksize=65536, md5filename='md5sum.txt'):
@@ -59,3 +87,4 @@ def md5sum(full_path, url, blocksize=65536, md5filename='md5sum.txt'):
         logger.warn("**** could not open {}".format(full_path))
         logger.exception(e)
         return None
+

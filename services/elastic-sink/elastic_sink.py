@@ -54,7 +54,7 @@ class ElasticHandler(object):
             es = self._es
             patient_id = url['user_metadata']['patient_id']
             library_id = url['user_metadata']['library_id']
-            res = es.search(index='dos', doc_type='meta',
+            res = es.search(index=args.kafka_topic, doc_type='meta',
                             q='patient_id:\"{}\" AND '
                             'library_id:\"{}\"'
                             .format(patient_id, library_id))
@@ -66,11 +66,11 @@ class ElasticHandler(object):
     def update_elastic(self, key, value):
         """ update dict to elastic"""
         es = self._es
-        doc = es.get(index='dos', doc_type='dos', id=get_id(value))
+        doc = es.get(index=args.kafka_topic, doc_type='dos', id=get_id(value))
         existing_urls = doc['_source']['urls']
         new_urls = value['urls']
         updated_urls = new_urls + [u for u in existing_urls if u['url'] not in [n['url'] for n in new_urls]]
-        es.update(index='dos', doc_type='dos',
+        es.update(index=args.kafka_topic, doc_type='dos',
                   id=get_id(value),
                   body={
                     'doc': {
@@ -89,13 +89,13 @@ class ElasticHandler(object):
         if key.startswith('ObjectRemoved'):
             logger.debug(key)
             url = key.split('~')[1]
-            res = es.search(index='dos', doc_type='dos',
+            res = es.search(index=args.kafka_topic, doc_type='dos',
                             q='url:\"{}\"'.format(url))
             for doc in res['hits']['hits']:
-                del_rsp = es.delete(index='dos', doc_type='dos', id=doc['_id'])
+                del_rsp = es.delete(index=args.kafka_topic, doc_type='dos', id=doc['_id'])
                 logger.debug(del_rsp)
         else:
-            es.create(index='dos', doc_type='dos',
+            es.create(index=args.kafka_topic, doc_type='dos',
                       id=get_id(value), body=value)
 
 
@@ -159,6 +159,7 @@ if __name__ == "__main__":
         logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 
     logger = logging.getLogger(__name__)
+    logger.info(args)
 
     event_handler = ElasticHandler(
         elastic_url=args.elastic_url,

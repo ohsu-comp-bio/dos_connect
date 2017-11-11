@@ -181,7 +181,7 @@ def load_gdc():
     pagination['pages'] = 1
     pagination['page'] = 0
     page_length = 1000
-    next_record = 255000
+    next_record = 0
     while int(pagination.get('page')) < int(pagination.get('pages')):
         # try:
         print pagination

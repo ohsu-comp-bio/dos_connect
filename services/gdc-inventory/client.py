@@ -13,7 +13,7 @@ config = {
 # models = SwaggerClient.from_url('{}/swagger.json'.format(URL), config=config)
 
 spec_dict = load_file('data_objects_service.swagger.json')
-spec_dict['host'] = '{}:{}'.format('localhost', '8080')
+spec_dict['host'] = '{}:{}'.format('localhost', '5555')
 
 models = SwaggerClient.from_spec(spec_dict,
                                  config=config)

@@ -77,7 +77,7 @@ def process(args, message):
     #                                 container)
 
     _id = record['url']
-    _urls = [record['url']]
+    _url = record['url']
 
     if message_json['eventType'] == 'Microsoft.Storage.BlobCreated':
         # get blob info
@@ -112,7 +112,8 @@ def process(args, message):
             if val:
                 system_metadata[field] = val
 
-        system_metadata['eventType'] = event_methods[message_json['eventType']]
+        system_metadata['event_type'] = event_methods[message_json['eventType']]
+        urls = [{'url': _url, 'system_metadata': system_metadata, "user_metadata": blob.metadata }]
 
         last_modified = str(blob.properties.last_modified).replace(' ', 'T')
         data_object = {
@@ -121,10 +122,8 @@ def process(args, message):
           "created": last_modified,
           "updated": last_modified,
           # TODO check multipart md5 ?
-          "checksum": blob.properties.content_settings.content_md5,
-          "urls": _urls,
-          "system_metadata": system_metadata,
-          "user_metadata": blob.metadata
+          "checksums": [{"checksum": blob.properties.content_settings.content_md5, 'type': 'md5'}],
+          "urls": urls
         }
 
     logger.debug(json.dumps(data_object))
@@ -161,13 +160,6 @@ def consume(args):
 
 def populate_args(argparser):
     """add arguments we expect """
-    argparser.add_argument('--kafka_topic', '-kt',
-                           help='''kafka_topic''',
-                           default='dos-topic')
-
-    argparser.add_argument('--kafka_bootstrap', '-kb',
-                           help='''kafka host:port''',
-                           default='localhost:9092')
 
     argparser.add_argument('--azure_queue', '-aq',
                            help='azure queue name',
@@ -186,7 +178,7 @@ def populate_args(argparser):
                            default=False,
                            action="store_true")
 
-    custom_args(argsparser)
+    custom_args(argparser)
 
 if __name__ == '__main__':  # pragma: no cover
     argparser = argparse.ArgumentParser(

@@ -8,6 +8,7 @@ import datetime
 from dateutil.parser import parse
 from elasticsearch import Elasticsearch
 import elasticsearch
+import os 
 
 DEFAULT_PAGE_SIZE = 100
 
@@ -15,7 +16,7 @@ DEFAULT_PAGE_SIZE = 100
 data_objects = {}
 data_bundles = {}
 
-_es = Elasticsearch()
+_es = Elasticsearch( [os.environ['ELASTIC_URL']])
 ES_INDEX = 'dos-web-app'
 ES_VERSIONS = 'dos-web-app-versions'
 # Application logic
@@ -252,4 +253,4 @@ def configure_app():
 
 if __name__ == '__main__':
     app = configure_app()
-    app.run(port=8080, debug=True)
+    app.run(port=5555, debug=True)

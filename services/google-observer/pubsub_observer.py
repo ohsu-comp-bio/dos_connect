@@ -74,7 +74,7 @@ def process(args, message):
         'OBJECT_FINALIZE': 'ObjectCreated:Put',
         'OBJECT_METADATA_UPDATE': 'ObjectModified'
     }
-    system_metadata['eventType'] = event_methods[system_metadata['eventType']]
+    system_metadata['event_type'] = event_methods[system_metadata['eventType']]
 
     user_metadata = record.get('metadata', None)
 
@@ -90,7 +90,7 @@ def process(args, message):
       "updated": record['updated'],
       # TODO multipart ...
       # https://cloud.google.com/storage/docs/hashes-etags#_MD5
-      "checksum": [{"checksum": record['md5Hash'], 'type': 'md5'}],
+      "checksums": [{"checksum": record['md5Hash'], 'type': 'md5'}],
       "urls": _urls
     }
     # logger.debug(system_metadata.__class__)
@@ -148,13 +148,6 @@ def consume(args):
 
 def populate_args(argparser):
     """add arguments we expect """
-    argparser.add_argument('--kafka_topic', '-kt',
-                           help='''kafka_topic''',
-                           default='s3-topic')
-
-    argparser.add_argument('--kafka_bootstrap', '-kb',
-                           help='''kafka host:port''',
-                           default='localhost:9092')
 
     argparser.add_argument('--google_cloud_project', '-kp',
                            help='project id',
@@ -172,6 +165,11 @@ def populate_args(argparser):
                            help='''dry run''',
                            default=False,
                            action='store_true')
+    
+    argparser.add_argument("-v", "--verbose", help="increase output verbosity",
+                           default=False,
+                           action="store_true")
+
     custom_args(argparser)
 
 
