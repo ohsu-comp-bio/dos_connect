@@ -1,8 +1,0 @@
-docker run --rm \
-  --network=host \
-  -v $(pwd)/volumes/client-certs:/client-certs \
-  -e BLOB_STORAGE_ACCOUNT=$BLOB_STORAGE_ACCOUNT \
-  -e BLOB_STORAGE_ACCESS_KEY=$BLOB_STORAGE_ACCESS_KEY \
-  azure-inventory:latest   python azure_inventory.py \
-  --kafka_topic $KAFKA_DOS_TOPIC --kafka_bootstrap $KAFKA_BOOTSTRAP_SERVERS \
-  --azure_container $AWS_TEST_BUCKET

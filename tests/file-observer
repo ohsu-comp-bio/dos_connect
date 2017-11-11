@@ -1,5 +1,0 @@
-#!/bin/bash
-echo 'testing' > volumes/files/testing-file-observer.txt
-# echo sleeping 65 secs ...
-# sleep 65
-# rm  volumes/files/testing-file-observer.txt
