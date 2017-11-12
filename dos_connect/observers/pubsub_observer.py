@@ -10,12 +10,56 @@ import time
 import pprint
 from customizations import store, custom_args
 import sys
-
+from .. import common_args, common_logging
 
 # Instantiates a client
-storage_client = storage.Client()
+STORAGE_CLIENT = None
 # bucket info
 buckets = {}
+
+
+def _client():
+    global STORAGE_CLIENT
+    if not STORAGE_CLIENT:
+        STORAGE_CLIENT = storage.Client()
+    return STORAGE_CLIENT
+
+
+def to_dos(message):
+    record = json.loads(message.data)
+    if not record['kind'] == "storage#object":
+        return None
+    system_metadata = dict(message.attributes)
+    for field in ["crc32c", "etag", "storageClass", "bucket", "generation"
+                  "metageneration", "contentType"]:
+        if field in record:
+            system_metadata[field] = record[field]
+    # https://cloud.google.com/storage/docs/pubsub-notifications#events
+    event_methods = {
+        'OBJECT_DELETE': 'ObjectRemoved:Delete',
+        'OBJECT_ARCHIVE': 'ObjectCreated:Copy',
+        'OBJECT_FINALIZE': 'ObjectCreated:Put',
+        'OBJECT_METADATA_UPDATE': 'ObjectModified'
+    }
+    system_metadata['event_type'] = event_methods[system_metadata['eventType']]
+
+    user_metadata = record.get('metadata', None)
+
+    _id = record['id']
+    _urls = [{'url': record['mediaLink'],
+              'system_metadata': system_metadata,
+              'user_metadata': user_metadata
+              }]
+    return {
+      "id": _id,
+      "file_size": int(record['size']),
+      "created": record['timeCreated'],
+      "updated": record['updated'],
+      # TODO multipart ...
+      # https://cloud.google.com/storage/docs/hashes-etags#_MD5
+      "checksums": [{"checksum": record['md5Hash'], 'type': 'md5'}],
+      "urls": _urls
+    }
 
 
 def process(args, message):
@@ -53,53 +97,16 @@ def process(args, message):
     #   "etag": "CKT4y8qBlNcCEAI="
     # }
 
-    record = json.loads(message.data)
-    if not record['kind'] == "storage#object":
+    data_object = to_dos(message)
+    if data_object:
+        bucketId = message.attributes['bucketId']
+        if bucketId not in buckets:
+            buckets[bucketId] = _client().get_bucket(bucketId)
+        data_object['urls'][0]['system_metadata']['location'] = buckets[bucketId].location
+
+        logger.debug(json.dumps(data_object))
+        store(args, data_object)
         return True
-
-    bucketId = message.attributes['bucketId']
-    if bucketId not in buckets:
-        buckets[bucketId] = storage_client.get_bucket(bucketId)
-
-    system_metadata = dict(message.attributes)
-    for field in ["crc32c", "etag", "storageClass", "bucket", "generation"
-                  "metageneration", "contentType"]:
-        if field in record:
-            system_metadata[field] = record[field]
-    system_metadata['location'] = buckets[bucketId].location
-    # https://cloud.google.com/storage/docs/pubsub-notifications#events
-    event_methods = {
-        'OBJECT_DELETE': 'ObjectRemoved:Delete',
-        'OBJECT_ARCHIVE': 'ObjectCreated:Copy',
-        'OBJECT_FINALIZE': 'ObjectCreated:Put',
-        'OBJECT_METADATA_UPDATE': 'ObjectModified'
-    }
-    system_metadata['event_type'] = event_methods[system_metadata['eventType']]
-
-    user_metadata = record.get('metadata', None)
-
-    _id = record['id']
-    _urls = [{'url': record['mediaLink'],
-              'system_metadata': system_metadata,
-              'user_metadata': user_metadata
-              }]
-    data_object = {
-      "id": _id,
-      "file_size": int(record['size']),
-      "created": record['timeCreated'],
-      "updated": record['updated'],
-      # TODO multipart ...
-      # https://cloud.google.com/storage/docs/hashes-etags#_MD5
-      "checksums": [{"checksum": record['md5Hash'], 'type': 'md5'}],
-      "urls": _urls
-    }
-    # logger.debug(system_metadata.__class__)
-    # logger.debug(type(system_metadata))
-    # pp = pprint.PrettyPrinter(indent=2)
-    # pp.pprint(system_metadata)
-    logger.debug(json.dumps(data_object))
-    store(args, data_object)
-    return True
 
 
 def consume(args):
@@ -161,15 +168,7 @@ def populate_args(argparser):
                            help='pubsub subscription name',
                            default='dos-testing')
 
-    argparser.add_argument('--dry_run', '-d',
-                           help='''dry run''',
-                           default=False,
-                           action='store_true')
-    
-    argparser.add_argument("-v", "--verbose", help="increase output verbosity",
-                           default=False,
-                           action="store_true")
-
+    common_args(argparser)
     custom_args(argparser)
 
 
@@ -178,10 +177,7 @@ if __name__ == '__main__':  # pragma: no cover
         description='Consume events from aws s3, populate kafka')
     populate_args(argparser)
     args = argparser.parse_args()
-    if args.verbose:
-        logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
-    else:
-        logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+    common_logging(args)
     logger = logging.getLogger(__name__)
 
     consume(args)

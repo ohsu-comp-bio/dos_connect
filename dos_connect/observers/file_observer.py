@@ -17,6 +17,7 @@ import json
 import re
 from file_observer_customizations import md5sum, user_metadata, before_store
 from customizations import store, custom_args
+from .. import common_args, common_logging
 
 
 class DOSHandler(PatternMatchingEventHandler):
@@ -37,10 +38,7 @@ class DOSHandler(PatternMatchingEventHandler):
         except Exception as e:
             logger.exception(e)
 
-    def process(self, event):
-        if (event.is_directory):
-            return
-
+    def to_dos(self, event):
         event_methods = {
             'deleted': 'ObjectRemoved:Delete',
             'moved': 'ObjectCreated:Copy',
@@ -81,7 +79,13 @@ class DOSHandler(PatternMatchingEventHandler):
                                       event_methods.get(event.event_type),
                                       "bucket_name": self.monitor_directory}}]
             }
-        before_store(args,data_object)
+        return data_object
+
+    def process(self, event):
+        if (event.is_directory):
+            return
+        data_object = self.to_dos(event)
+        before_store(args, data_object)
         store(args, data_object)
 
     def path2url(self, path):
@@ -119,32 +123,21 @@ if __name__ == "__main__":
                            default=False,
                            action='store_true')
 
-    argparser.add_argument('--dry_run', '-d',
-                           help='''dry run''',
-                           default=False,
-                           action='store_true')
-
     argparser.add_argument('--polling_interval', '-pi',
                            help='interval in seconds between polling '
                                 'the file system',
                            default=60)
 
-    argparser.add_argument("-v", "--verbose", help="increase output verbosity",
-                           default=False,
-                           action="store_true")
-
     argparser.add_argument('monitor_directory',
                            help='''directory to monitor''',
                            default='.')
 
+    common_args(argparser)
     custom_args(argparser)
 
     args = argparser.parse_args()
 
-    if args.verbose:
-        logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
-    else:
-        logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+    common_logging(args)
 
     logger = logging.getLogger(__name__)
 
@@ -180,4 +173,3 @@ if __name__ == "__main__":
         except KeyboardInterrupt:
             observer.stop()
         observer.join()
-

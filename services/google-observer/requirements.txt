@@ -1,3 +1,0 @@
-kafka-python
-google-cloud-storage
-google-cloud-pubsub

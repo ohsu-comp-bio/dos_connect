@@ -16,44 +16,22 @@ from urlparse import urlparse
 import sys
 import datetime
 from customizations import store, custom_args
+from .. import common_args, common_logging
+
+
+BLOB_SERVICE = None
 
 
 # Instantiates a storage client
-block_blob_service = BlockBlobService(
-                        account_name=os.environ.get('BLOB_STORAGE_ACCOUNT'),
-                        account_key=os.environ.get('BLOB_STORAGE_ACCESS_KEY'))
+def _blob_service():
+    if not BLOB_SERVICE:
+        BLOB_SERVICE = BlockBlobService(
+            account_name=os.environ.get('BLOB_STORAGE_ACCOUNT'),
+            account_key=os.environ.get('BLOB_STORAGE_ACCESS_KEY'))
+    return BLOB_SERVICE
 
-# container info
-containers = {}
 
-
-def process(args, message):
-
-    message_json = json.loads(message.content)
-    # {
-    #   "topic":"/subscriptions/68106052-6b47-46b3-bd47-0cd668b9b500/resourceGroups/dostesting/providers/Microsoft.Storage/storageAccounts/dostesting",
-    #   "subject":"/blobServices/default/containers/dos-testing/blobs/testing-20171031073707.txt",
-    #   "eventType":"Microsoft.Storage.BlobCreated",
-    #   "eventTime":"2017-10-31T14:39:20.415Z",
-    #   "id":"23377130-001e-0019-5456-52940906bd44",
-    #   "data":{
-    #     "api":"PutBlob",
-    #     "clientRequestId":"46896a98-be49-11e7-bbfa-acbc32be6b2d",
-    #     "requestId":"23377130-001e-0019-5456-529409000000",
-    #     "eTag":"0x8D5206D2BFA8492",
-    #     "contentType":"text/plain",
-    #     "contentLength":8,
-    #     "blobType":"BlockBlob",
-    #     "url":"https://dostesting.blob.core.windows.net/dos-testing/testing-20171031073707.txt",
-    #     "sequencer":"00000000000027AE00000000002C92E3",
-    #     "storageDiagnostics":{
-    #       "batchId":"8483f333-0ab2-4bec-a23b-90ae8f0465c3"
-    #     }
-    #   }
-    # }
-
-    if not message_json['eventType'].startswith('Microsoft.Storage'):
-        return True
+def to_dos(message_json, blob=None):
     record = message_json['data']
     # get storage account, container and blob_name
     parsed_url = urlparse(record['url'])
@@ -78,55 +56,49 @@ def process(args, message):
 
     _id = record['url']
     _url = record['url']
+    system_metadata = {'event_type': event_methods[message_json['eventType']]}
+    urls = [{'url': _url,
+             'system_metadata': system_metadata,
+             "user_metadata": {}}]
 
-    if message_json['eventType'] == 'Microsoft.Storage.BlobCreated':
-        # get blob info
-        blob = block_blob_service.get_blob_properties(container, blob_name)
-        # {'content': '',
-        #    'metadata': {'foo': 'bar'},
-        #    'snapshot': None,
-        #    'name': u'testing-20171031133540.txt',
-        #    'properties': <azure.storage.blob.models.BlobProperties object at
-        # # blob.properties
-        # {'content_length': 8,
-        #    'server_encrypted': True,
-        #    'blob_type': 'BlockBlob',
-        #    'blob_tier_inferred': True,
-        #    'blob_tier': 'Hot',
-        #    'append_blob_committed_block_count': None,
-        #    'last_modified': datetime.datetime(2017, 10, 31, 20, 39, 36,
-        #     tzinfo=tzutc()),
-        #    'content_range': None,
-        #    'etag': '"0x8D5209F803A286C"',
-        #    'page_blob_sequence_number': None,
-        #    'content_settings': <azure.storage.blob.models.ContentSettings
-        #    'copy': <azure.storage.blob.models.CopyProperties object at
-        #    'lease': <azure.storage.blob.models.LeaseProperties object at
-        #
+    data_object = {
+      "id": _id,
+      "urls": urls
+    }
 
-        system_metadata = {}
+    if blob:
         for field in ['server_encrypted', 'blob_type', 'blob_tier_inferred',
                       'blob_tier', 'append_blob_committed_block_count',
                       'content_range', 'etag', 'page_blob_sequence_number']:
             val = getattr(blob.properties, field, None)
             if val:
                 system_metadata[field] = val
-
-        system_metadata['event_type'] = event_methods[message_json['eventType']]
-        urls = [{'url': _url, 'system_metadata': system_metadata, "user_metadata": blob.metadata }]
-
         last_modified = str(blob.properties.last_modified).replace(' ', 'T')
         data_object = {
           "id": _id,
           "file_size": blob.properties.content_length,
           "created": last_modified,
           "updated": last_modified,
+          "mime_type": blob.properties.content_settings.content_type,
           # TODO check multipart md5 ?
-          "checksums": [{"checksum": blob.properties.content_settings.content_md5, 'type': 'md5'}],
+          "checksums": [{"checksum": blob.properties.content_settings.content_md5, 'type': 'md5'}],  # NOQA
           "urls": urls
         }
 
-    logger.debug(json.dumps(data_object))
+    return data_object
+
+
+def process(args, message):
+
+    message_json = json.loads(message.content)
+    if not message_json['eventType'].startswith('Microsoft.Storage'):
+        return True
+    data_object = to_dos(message_json)
+    if message_json['eventType'] == 'Microsoft.Storage.BlobCreated':
+        # get blob info
+        blob = _blob_service().get_blob_properties(container, blob_name)
+        data_object = to_dos(message_json, blob)
+
     store(args, data_object)
     return True
 
@@ -169,27 +141,15 @@ def populate_args(argparser):
                            help='time to wait between fetches',
                            default=5)
 
-    argparser.add_argument('--dry_run', '-d',
-                           help='''dry run''',
-                           default=False,
-                           action='store_true')
-
-    argparser.add_argument("-v", "--verbose", help="increase output verbosity",
-                           default=False,
-                           action="store_true")
-
+    common_args(argparser)
     custom_args(argparser)
 
 if __name__ == '__main__':  # pragma: no cover
     argparser = argparse.ArgumentParser(
-        description='Consume events from azure storage queue, populate kafka')
+        description='Consume events from azure storage queue, populate store')
     populate_args(argparser)
     args = argparser.parse_args()
-    if args.verbose:
-        logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
-    else:
-        logging.basicConfig(stream=sys.stdout, level=logging.INFO)
-
+    common_logging(args)
     logger = logging.getLogger(__name__)
 
     logger.debug(args)

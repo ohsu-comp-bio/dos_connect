@@ -44,7 +44,8 @@ services:
   # user service: monitor aws SQS queue
   aws-observer:
     build:
-      context: services/aws-observer
+      context: .
+      dockerfile: services/aws-observer/Dockerfile
     depends_on:
       - kafka
     volumes:
@@ -63,7 +64,8 @@ services:
   # user service: monitor aws SQS queue
   google-observer:
     build:
-      context: services/google-observer
+      context: .
+      dockerfile: services/google-observer/Dockerfile
     volumes:
       # client side certs and keys
       - "./volumes/client-certs:/client-certs"
@@ -79,7 +81,8 @@ services:
   # user service: monitor azure storage queue
   azure-observer:
     build:
-      context: services/azure-observer
+      context: .
+      dockerfile: services/azure-observer/Dockerfile
     volumes:
       # client side certs and keys
       - "./volumes/client-certs:/client-certs"
@@ -99,7 +102,8 @@ services:
   # user service: monitor file system
   file-observer:
     build:
-      context: services/file-observer
+      context: .
+      dockerfile: services/file-observer/Dockerfile
     volumes:
     network_mode: host
     depends_on:
@@ -118,7 +122,8 @@ services:
   # user service: monitor topic, write to elastic
   elastic-sink:
     build:
-      context: services/elastic-sink
+      context: .
+      dockerfile: services/elastic-sink/Dockerfile
     volumes:
       # client side certs and keys
       - "./volumes/client-certs:/client-certs"

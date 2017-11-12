@@ -5,7 +5,7 @@ import json
 import argparse
 import logging
 import sys
-
+from .. import common_args, common_logging
 
 
 def get_id(value):
@@ -48,7 +48,7 @@ class ElasticHandler(object):
     def decorate_metadata(self, key, value):
         """ update dos user_metadata with complete meta data """
         url = value['urls'][0]
-        if 'user_metadata' in url and \
+        if 'user_metadata' in url and url['user_metadata'] and \
                 'patient_id' in url['user_metadata'] and \
                 'library_id' in url['user_metadata']:
             es = self._es
@@ -112,11 +112,6 @@ if __name__ == "__main__":
                            help='''kafka host:port''',
                            default='localhost:9092')
 
-    argparser.add_argument('--dry_run', '-d',
-                           help='''dry run''',
-                           default=False,
-                           action='store_true')
-
     argparser.add_argument('--elastic_url', '-e',
                            help='''elasticsearch endpoint''',
                            default='localhost:9200')
@@ -147,17 +142,10 @@ if __name__ == "__main__":
                            help='client private key pem file',
                            default='/client-certs/key.pem')
 
-    argparser.add_argument("-v", "--verbose", help="increase output verbosity",
-                           default=False,
-                           action="store_true")
-
+    common_args(argparser)
     args = argparser.parse_args()
 
-    if args.verbose:
-        logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
-    else:
-        logging.basicConfig(stream=sys.stdout, level=logging.INFO)
-
+    common_logging(args)
     logger = logging.getLogger(__name__)
     logger.info(args)
 
@@ -197,4 +185,3 @@ if __name__ == "__main__":
         sys.stderr.write('.')
         sys.stderr.flush()
         event_handler.on_any_event(message.key, json.loads(message.value))
-

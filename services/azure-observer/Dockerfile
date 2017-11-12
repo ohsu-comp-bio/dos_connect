@@ -1,9 +1,9 @@
 FROM python:2.7
 COPY *.* /
+COPY dos_connect /dos_connect
 RUN pip install -r requirements.txt
 CMD QUEUE_STORAGE_ACCOUNT=dostestingq \
-  QUEUE_STORAGE_ACCESS_KEY=Q85J1MXqLl2i3UlacF+xOih7AG7jAhHqeTX8bC+g+9PZkdWwoepKNTwhgcH7qgAs2scRMIwccE0lZxFG1QuLfQ== \
+  QUEUE_STORAGE_ACCESS_KEY=$QUEUE_STORAGE_ACCESS_KEY \
   BLOB_STORAGE_ACCOUNT=dostesting \
-  BLOB_STORAGE_ACCESS_KEY=TAz4Ykz0EgIlLhhoEL/ur2OcSeythWxKYYyinkSArAxRcWakGbw7lBr5JsfUKvNHHhF1OKNlYYpP+XVR/Btl/A== \
-  python azure_observer.py  --azure_queue $AZURE_QUEUE
-
+  BLOB_STORAGE_ACCESS_KEY=$BLOB_STORAGE_ACCESS_KEY \
+  python -m dos_connect.observers.azure_observer  --azure_queue $AZURE_QUEUE

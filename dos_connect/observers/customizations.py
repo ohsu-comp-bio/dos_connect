@@ -1,6 +1,7 @@
 from kafka import KafkaProducer
 import logging
 import json
+from .. import common_args, common_logging
 
 _PRODUCER = None
 

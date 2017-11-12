@@ -4,6 +4,7 @@ import hashlib
 import re
 import logging
 from customizations import store, custom_args
+from .. import common_args, common_logging
 
 """ """
 all_checksums = {}
@@ -11,8 +12,8 @@ try:
     all_checksums = open('SMMARTData/all_checksums.tsv').read().split()
     all_checksums = dict(zip(all_checksums[0::2], all_checksums[1::2]))
 except Exception as e:
-    print("WARN could not open 'SMMARTData/all_checksums.tsv'")
-
+    pass
+    #  print("WARN could not open 'SMMARTData/all_checksums.tsv'")
 
 
 def _metadata(full_path):
@@ -32,11 +33,12 @@ def _hash_metadata(metadata):
     for k in metadata.keys():
         hash = hashlib.md5()
         hash.update(metadata[k])
-        metadata[k] =  hash.hexdigest()
+        metadata[k] = hash.hexdigest()
     return metadata
 
+
 def user_metadata(full_path):
-    return  _hash_metadata(_metadata(full_path))
+    return _hash_metadata(_metadata(full_path))
 
 
 def before_store(args, data_object):
@@ -79,7 +81,7 @@ def md5sum(full_path, url, blocksize=65536, md5filename='md5sum.txt'):
     try:
         with open(full_path, "rb") as f:
             logger.info("*** calculating hash for {} {}".format(full_path,
-                                                          orig_path))
+                                                                orig_path))
             for block in iter(lambda: f.read(blocksize), b""):
                 hash.update(block)
         return hash.hexdigest()
@@ -87,4 +89,3 @@ def md5sum(full_path, url, blocksize=65536, md5filename='md5sum.txt'):
         logger.warn("**** could not open {}".format(full_path))
         logger.exception(e)
         return None
-

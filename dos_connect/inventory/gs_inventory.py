@@ -9,13 +9,10 @@ import time
 import pprint
 import sys
 from customizations import store, custom_args
+from .. import common_args, common_logging
 
 
-def process(args, bucket, record):
-    if not record['kind'] == "storage#object":
-        return True
-
-    logger.debug(record)
+def to_dos(bucket, record):
     system_metadata = {}
     for field in ["crc32c", "etag", "storageClass", "bucket", "generation"
                   "metageneration", "contentType"]:
@@ -32,7 +29,7 @@ def process(args, bucket, record):
             "system_metadata": system_metadata,
             "user_metadata": user_metadata
         }]
-    data_object = {
+    return {
       "id": _id,
       "file_size": int(record['size']),
       "created": record['timeCreated'],
@@ -41,29 +38,22 @@ def process(args, bucket, record):
       "checksums": [{"checksum": record['md5Hash'], 'type': 'md5'}],
       "urls": _urls
     }
-    # logger.debug(system_metadata.__class__)
-    # logger.debug(type(system_metadata))
-    # pp = pprint.PrettyPrinter(indent=2)
-    # pp.pprint(system_metadata)
-    logger.debug(json.dumps(data_object))
-    store(args, data_object)
+
+
+def process(args, bucket, record):
+    if not record['kind'] == "storage#object":
+        return True
+
+    store(args, to_dos(bucket, record))
     return True
 
 
 def populate_args(argparser):
     """add arguments we expect """
-    argparser.add_argument('--dry_run', '-d',
-                           help='''dry run''',
-                           default=False,
-                           action='store_true')
-
-    argparser.add_argument("-v", "--verbose", help="increase output verbosity",
-                           default=False,
-                           action="store_true")
-
     argparser.add_argument('bucket_name',
                            help='''bucket_name to inventory''',
                            )
+    common_args(argparser)
     custom_args(argparser)
 
 
@@ -74,10 +64,7 @@ if __name__ == '__main__':  # pragma: no cover
 
     args = argparser.parse_args()
 
-    if args.verbose:
-        logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
-    else:
-        logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+    common_logging(args)
 
     logger = logging.getLogger(__name__)
     logger.debug(args)

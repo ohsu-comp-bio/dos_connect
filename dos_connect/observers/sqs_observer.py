@@ -5,7 +5,7 @@ import logging
 import urllib
 from customizations import store, custom_args
 import sys
-
+from .. import common_args, common_logging
 
 # Boto3 will check these environment variables for credentials:
 # AWS_ACCESS_KEY_ID The access key for your AWS account.
@@ -17,63 +17,72 @@ import sys
 # mainipulate the bucket via
 # AWS_ACCESS_KEY_ID=. AWS_SECRET_ACCESS_KEY=. aws s3 cp text  s3://dos-testing
 
+def to_dos(record):
+    """ given a message from the source, map to a new data_object """
+    system_metadata = {}
+    system_metadata['awsRegion'] = record['awsRegion']
+    s3 = record['s3']
+    system_metadata['bucket_name'] = s3['bucket']['name']
+    system_metadata['principalId'] = \
+        s3["bucket"]["ownerIdentity"]["principalId"]
+    system_metadata['event_type'] = record["eventName"]
+    obj = s3['object']
+
+    user_metadata = {}
+    _id = urllib.quote_plus(obj['key'])
+    _url = "s3://{}.s3-{}.amazonaws.com/{}".format(
+              system_metadata['bucket_name'],
+              record['awsRegion'],
+              _id
+              )
+    _url = {
+        'url': _url,
+        "system_metadata": system_metadata,
+        "user_metadata": user_metadata,
+    }
+    data_object = {
+      "id": _id,
+      "file_size": obj.get('size', None),
+      # The time, in ISO-8601,when S3 finished processing the request,
+      "created": record['eventTime'],
+      "updated": record['eventTime'],
+      # TODO multipart ...
+      # https://forums.aws.amazon.com/thread.jspa?messageID=203436&#203436
+      "checksums": [{'checksum': obj.get('eTag', None), 'type': 'md5'}],
+      # http://docs.aws.amazon.com/AmazonS3/latest/dev/UsingBucket.html#access-bucket-intro
+      "urls": [_url],
+    }
+    return data_object
+
 
 def process(args, message):
     """
     http://docs.aws.amazon.com/AmazonS3/latest/dev/notification-content-structure.html
     """
+    # we need a call to s3 to fetch metadata not in queue message
+    client = boto3.client('s3')
+
     logger.debug(message.body)
     sqs_json = message.body
     sqs = json.loads(sqs_json)
-    # we need a call to s3 to fetch metadata not in queue message
-    client = boto3.client('s3')
 
     if 'Records' not in sqs:
         return True
     for record in sqs['Records']:
         if not record['eventSource'] == "aws:s3":
             continue
-        system_metadata = {}
-        system_metadata['awsRegion'] = record['awsRegion']
-        s3 = record['s3']
-        system_metadata['bucket_name'] = s3['bucket']['name']
-        system_metadata['principalId'] = \
-            s3["bucket"]["ownerIdentity"]["principalId"]
-        system_metadata['event_type'] = record["eventName"]
-        obj = s3['object']
-
-        user_metadata = {}
-        if not system_metadata['event_type'] == "ObjectRemoved:Delete":
+        data_object = to_dos(record)
+        if not (data_object['urls'][0]['system_metadata']['event_type'] ==
+                "ObjectRemoved:Delete"):
             try:
                 head = client.head_object(Bucket=s3['bucket']['name'],
                                           Key=obj['key'])
-                user_metadata = head['Metadata'] if ('Metadata' in head) else None
+                if ('Metadata' in head):
+                    data_object['urls'][0]['user_metadata'] = head['Metadata']
             except Exception as e:
-                logger.info("head failed. {} {} {}".format(s3['bucket']['name'], obj['key'], e))
+                logger.info("head failed. {} {} {}"
+                            .format(s3['bucket']['name'], obj['key'], e))
 
-        _id = urllib.quote_plus(obj['key'])
-        _url = "s3://{}.s3-{}.amazonaws.com/{}".format(
-                  system_metadata['bucket_name'],
-                  record['awsRegion'],
-                  _id
-                  )
-        _url = {
-            'url': _url,
-            "system_metadata": system_metadata,
-            "user_metadata": user_metadata,
-        }
-        data_object = {
-          "id": _id,
-          "file_size": obj.get('size', None),
-          # The time, in ISO-8601,when S3 finished processing the request,
-          "created": record['eventTime'],
-          "updated": record['eventTime'],
-          # TODO multipart ...
-          # https://forums.aws.amazon.com/thread.jspa?messageID=203436&#203436
-          "checksums": [{'checksum': obj.get('eTag', None), 'type': 'md5'}],
-          # http://docs.aws.amazon.com/AmazonS3/latest/dev/UsingBucket.html#access-bucket-intro
-          "urls": [_url],
-        }
         logger.debug(json.dumps(data_object))
         store(args, data_object)
     return True
@@ -104,15 +113,9 @@ def populate_args(argparser):
     """add arguments we expect """
 
     argparser.add_argument('--sqs_queue_name', '-qn',
-                           help='''sqs queue name''',
+                           help='sqs queue name',
                            default='dos-testing')
-    argparser.add_argument("-v", "--verbose", help="increase output verbosity",
-                           default=False,
-                           action="store_true")
-    argparser.add_argument('--dry_run', '-d',
-                           help='''dry run''',
-                           default=False,
-                           action='store_true')
+    common_args(argparser)
     custom_args(argparser)
 
 if __name__ == '__main__':  # pragma: no cover
@@ -120,9 +123,6 @@ if __name__ == '__main__':  # pragma: no cover
         description='Consume events from aws s3, populate store')
     populate_args(argparser)
     args = argparser.parse_args()
-    if args.verbose:
-        logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
-    else:
-        logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+    common_logging(args)
     logger = logging.getLogger(__name__)
     consume(args)

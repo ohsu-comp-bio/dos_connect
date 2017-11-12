@@ -9,27 +9,12 @@ import urllib
 from botocore.client import Config
 from urlparse import urlparse
 from customizations import store, custom_args
+from .. import common_args, common_logging
 
 logger = logging.getLogger('s3_inventory')
 
 
-class DOSHandler(object):
-
-    """Creates DOS object in store in response to matched events."""
-
-    def __init__(self,
-                 args=None):
-        super(DOSHandler, self).__init__()
-        self.dry_run = args.dry_run
-
-    def on_any_event(self, endpoint_url, region, bucket_name, record,
-                     metadata):
-        try:
-            self.process(endpoint_url, region, bucket_name, record, metadata)
-        except Exception as e:
-            logger.exception(e)
-
-    def process(self, endpoint_url, region, bucket_name, record, metadata):
+def to_dos(endpoint_url, region, bucket_name, record, metadata):
         """
         {u'LastModified':
             datetime.datetime(2017, 10, 23, 16, 20, 45, tzinfo=tzutc()),
@@ -65,7 +50,7 @@ class DOSHandler(object):
             etag = etag[1:-1]
         if etag.startswith('%22') and etag.endswith('%22'):
             etag = etag[3:-3]
-        data_object = {
+        return {
           "id": _id,
           "file_size": record['Size'],
           # The time, in ISO-8601,when S3 finished processing the request,
@@ -75,6 +60,27 @@ class DOSHandler(object):
           "checksums": [{'checksum': etag, 'type': 'md5'}],
           "urls": [_url]
         }
+
+
+class DOSHandler(object):
+
+    """Creates DOS object in store in response to matched events."""
+
+    def __init__(self,
+                 args=None):
+        super(DOSHandler, self).__init__()
+        self.dry_run = args.dry_run
+
+    def on_any_event(self, endpoint_url, region, bucket_name, record,
+                     metadata):
+        try:
+            self.process(endpoint_url, region, bucket_name, record, metadata)
+        except Exception as e:
+            logger.exception(e)
+
+    def process(self, endpoint_url, region, bucket_name, record, metadata):
+        data_object = to_dos(endpoint_url, region, bucket_name, record,
+                             metadata)
         store(args, data_object)
 
 
@@ -82,27 +88,18 @@ if __name__ == "__main__":
 
     argparser = argparse.ArgumentParser(
         description='Consume events from bucket, populate store')
-    argparser.add_argument('--dry_run', '-d',
-                           help='''dry run''',
-                           default=False,
-                           action='store_true')
     argparser.add_argument('--endpoint_url', '-ep',
                            help='''for swift, ceph, other non-aws endpoints''',
                            default=None)
     argparser.add_argument('bucket_name',
                            help='''bucket_name to inventory''',
                            )
-    argparser.add_argument("-v", "--verbose", help="increase output verbosity",
-                           default=False,
-                           action="store_true")
+    common_args(argparser)
     custom_args(argparser)
 
     args = argparser.parse_args()
 
-    if args.verbose:
-        logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
-    else:
-        logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+    common_logging(args)
 
     logger = logging.getLogger(__name__)
 
@@ -135,4 +132,3 @@ if __name__ == "__main__":
             metadata = head['Metadata'] if ('Metadata' in head) else None
             event_handler.on_any_event(args.endpoint_url, region,
                                        args.bucket_name, record, metadata)
-
