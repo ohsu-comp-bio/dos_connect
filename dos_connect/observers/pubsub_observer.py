@@ -19,6 +19,7 @@ buckets = {}
 
 
 def _client():
+    global STORAGE_CLIENT
     if not STORAGE_CLIENT:
         STORAGE_CLIENT = storage.Client()
     return STORAGE_CLIENT
@@ -101,7 +102,7 @@ def process(args, message):
         bucketId = message.attributes['bucketId']
         if bucketId not in buckets:
             buckets[bucketId] = _client().get_bucket(bucketId)
-        system_metadata['location'] = buckets[bucketId].location
+        data_object['urls'][0]['system_metadata']['location'] = buckets[bucketId].location
 
         logger.debug(json.dumps(data_object))
         store(args, data_object)

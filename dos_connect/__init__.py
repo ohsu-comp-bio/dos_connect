@@ -7,6 +7,8 @@ Provides
   3. Web app to query into registry
 """
 import argparse
+import logging
+import sys
 
 
 def common_args(argparser):

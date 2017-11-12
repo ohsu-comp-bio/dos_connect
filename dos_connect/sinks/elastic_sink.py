@@ -48,7 +48,7 @@ class ElasticHandler(object):
     def decorate_metadata(self, key, value):
         """ update dos user_metadata with complete meta data """
         url = value['urls'][0]
-        if 'user_metadata' in url and \
+        if 'user_metadata' in url and url['user_metadata'] and \
                 'patient_id' in url['user_metadata'] and \
                 'library_id' in url['user_metadata']:
             es = self._es
@@ -145,7 +145,7 @@ if __name__ == "__main__":
     common_args(argparser)
     args = argparser.parse_args()
 
-    common_logging()
+    common_logging(args)
     logger = logging.getLogger(__name__)
     logger.info(args)
 
