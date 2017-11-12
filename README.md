@@ -99,16 +99,21 @@ For development and proof of concept, a docker-compose setup is provided.
   * For more, Read [Kafka Single Node](https://github.com/Landoop/fast-data-dev )
 
 ### testing
-  * test the services
+  * unit tests
   ```
-  $testing/aws-inventory
-  $testing/aws-observer
-  $testing/file-inventory
-  $testing/file-observer
-  $testing/swift-inventory
-  $testing/swift-observer
-  $testing/azure-observer
-  $testing/azure-inventory
+  $pytest
+  ```
+
+  * send ad-hoc test messages
+  ```
+  $util/aws-inventory
+  $util/aws-observer
+  $util/file-inventory
+  $util/file-observer
+  $util/swift-inventory
+  $util/swift-observer
+  $util/azure-observer
+  $util/azure-inventory
   ```
   * visit hostname:$KAFKA_TOPIC_UI_PORT to see the results
   ![image](https://user-images.githubusercontent.com/47808/32018643-62b37840-b97f-11e7-9203-0e1c7f41a0be.png)
@@ -124,5 +129,7 @@ For development and proof of concept, a docker-compose setup is provided.
   $bin/clean
   ```
 
-### TODO
-  Observe azure ...
+### customize
+  All Kafka code can be overwritten
+  * dos_connect/observers/customizations.py
+  * dos_connect/inventory/customizations.py  
