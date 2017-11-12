@@ -1,5 +1,5 @@
 #!/bin/bash
-pushd services/file-observer/ ; docker build -t file-inventory . ; popd
-pushd services/s3-inventory/ ; docker build -t s3-inventory . ; popd
-pushd services/google-inventory/ ; docker build -t google-inventory . ; popd
-pushd services/azure-inventory/ ; docker build -t azure-inventory . ; popd
+docker build -t file-inventory -f services/file-observer/Dockerfile .
+docker build -t s3-inventory  services/s3-inventory/Dockerfile .
+docker build -t google-inventory -f services/google-inventory/Dockerfile .
+docker build -t azure-inventory -f services/azure-inventory/Dockerfile . 
