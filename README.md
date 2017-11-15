@@ -133,3 +133,7 @@ For development and proof of concept, a docker-compose setup is provided.
   All Kafka code can be overwritten
   * dos_connect/observers/customizations.py
   * dos_connect/inventory/customizations.py  
+
+### todo
+  * refactor to move kafka & elastic behind standard webserver
+  ![image](https://user-images.githubusercontent.com/47808/32866456-cc4d7438-ca1c-11e7-888a-799f2e630691.png)
