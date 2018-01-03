@@ -12,6 +12,12 @@ For development and proof of concept, a docker-compose setup is provided.
 A elastic-sink service is provided to illustrate the consuming from the topic and maintaining a user facing query store.
 
 
+### install 
+
+```
+pip install -r requirements.txt --process-dependency-links -I
+```
+
 ### setup
   create .env file in the cloned repo
   ```
