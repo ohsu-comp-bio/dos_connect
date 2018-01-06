@@ -5,10 +5,14 @@ import connexion
 from flask_cors import CORS
 
 import argparse
+import sys
 
 import ga4gh.dos
 # These are imported by name by connexion so we assert it here.
-from ga4gh.dos.controllers import *  # noqa
+from controllers import *  # noqa
+# the swagger doc points to 'ga4gh.dos.server' module
+# so, override it here.
+sys.modules['ga4gh.dos.server'] = sys.modules[__name__]
 
 
 def configure_app():
@@ -16,7 +20,8 @@ def configure_app():
         __name__,
         swagger_ui=True,
         swagger_json=True)
-    app.add_api(ga4gh.dos.server.SWAGGER_PATH)
+    # ga4gh.dos.server.SWAGGER_PATH)
+    app.add_api('data_objects_service.swagger.json')
 
     CORS(app.app)
     return app
@@ -28,6 +33,7 @@ def main(args):
 
 
 if __name__ == '__main__':
-    argparser = argparse.ArgumentParser(description='GA4GH dos_connect webserver')
+    description = 'GA4GH dos_connect webserver'
+    argparser = argparse.ArgumentParser(description=description)
     argparser.add_argument('-P', '--port', default=8080, type=int)
     main(argparser.parse_args())
