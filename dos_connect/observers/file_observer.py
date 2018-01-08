@@ -6,6 +6,7 @@ from watchdog.events import PatternMatchingEventHandler, FileCreatedEvent
 from watchdog.events import DirCreatedEvent
 from watchdog.observers.polling import PollingObserver
 import datetime
+import arrow
 import urlparse
 import urllib
 import socket
@@ -62,8 +63,9 @@ class DOSHandler(PatternMatchingEventHandler):
             f = os.stat(event.src_path)
             if not S_ISREG(f.st_mode):
                 return
-            ctime = datetime.datetime.fromtimestamp(f.st_ctime).isoformat()
-            mtime = datetime.datetime.fromtimestamp(f.st_mtime).isoformat()
+
+            ctime = arrow.get(f.st_ctime)
+            mtime = arrow.get(f.st_mtime)
             data_object = {
               "id": _id,
               "size": f.st_size,
