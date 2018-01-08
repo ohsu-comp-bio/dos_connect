@@ -1,9 +1,9 @@
-from kafka import KafkaProducer
+from ga4gh.dos.client import Client
 import logging
 import json
 from .. import common_args, common_logging
 
-_PRODUCER = None
+_CLIENT = None
 
 
 def store(args, payload):
@@ -12,57 +12,43 @@ def store(args, payload):
     key = '{}~{}'.format(payload['urls'][0]['system_metadata']['event_type'],
                          payload['urls'][0]['url'])
     if not args.dry_run:
-        producer = _producer(args)
-        producer.send(args.kafka_topic, key=key, value=json.dumps(payload))
-        producer.flush()
-        logger.info('sent to kafka topic: {} {}'
-                    .format(args.kafka_topic, key))
+        server = _server(args)
+        models = server['models']
+        client = server['client']
+        Checksum = models.get_model('ga4ghChecksum')
+        URL = models.get_model('ga4ghURL')
+        CreateDataObjectRequest = models.get_model(
+                                    'ga4ghCreateDataObjectRequest')
+        DataObject = models.get_model('ga4ghCreateDataObjectRequest')
+        create_data_object = DataObject().unmarshal(payload)
+        create_request = CreateDataObjectRequest(
+                            data_object=create_data_object)
+        create_response = client.CreateDataObject(body=create_request).result()
+        data_object_id = create_response['data_object_id']
+        logger.info('sent to dos_server: {} {}'.format(key, data_object_id))
     else:
-        logger.info('dry_run to kafka topic: {} {}'
-                    .format(args.kafka_topic, key))
+        logger.info('dry_run to dos_server: {}'.format(key))
 
 
 def custom_args(argparser):
     """add arguments we expect """
 
-    argparser.add_argument('--no_tls',
-                           help='kafka connection plaintext? default: False',
-                           default=False,
-                           action='store_true')
-
-    argparser.add_argument('--ssl_cafile',
-                           help='server CA pem file',
-                           default='/client-certs/CARoot.pem')
-
-    argparser.add_argument('--ssl_certfile',
-                           help='client certificate pem file',
-                           default='/client-certs/certificate.pem')
-
-    argparser.add_argument('--ssl_keyfile',
-                           help='client private key pem file',
-                           default='/client-certs/key.pem')
-
-    argparser.add_argument('--kafka_topic', '-kt',
-                           help='''kafka_topic''',
-                           default='s3-topic')
-
-    argparser.add_argument('--kafka_bootstrap', '-kb',
-                           help='''kafka host:port''',
-                           default='localhost:9092')
+    argparser.add_argument('--dos_server', '-ds',
+                           help='full url of dos server',
+                           default='http://localhost:8080/')
 
 
-def _producer(args):
+def _server(args):
     """ create a connection """
-    global _PRODUCER
-    if not _PRODUCER:
-        if not args.no_tls:
-            _PRODUCER = KafkaProducer(bootstrap_servers=args.kafka_bootstrap,
-                                      security_protocol='SSL',
-                                      ssl_check_hostname=False,
-                                      ssl_cafile=args.ssl_cafile,
-                                      ssl_certfile=args.ssl_certfile,
-                                      ssl_keyfile=args.ssl_keyfile)
-        else:
-            _PRODUCER = KafkaProducer(bootstrap_servers=args.kafka_bootstrap)
-
-    return _PRODUCER
+    global _CLIENT
+    if not _CLIENT:
+        config = {
+            'validate_requests': False,
+            'validate_responses': False
+        }
+        local_client = Client(args.dos_server, config=config)
+        _CLIENT = {
+            'client': local_client.client,
+            'models': local_client.models
+        }
+    return _CLIENT
