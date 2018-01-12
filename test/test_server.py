@@ -2,6 +2,7 @@
 import logging
 import sys
 import os
+import uuid
 from bravado.requests_client import RequestsClient
 from bravado.client import SwaggerClient
 
@@ -18,15 +19,23 @@ root.addHandler(ch)
 # HTTPConnection.debuglevel = logging.DEBUG
 # logging.getLogger("urllib3").setLevel(logging.DEBUG)
 
-
+# ********
+# old - use dos client directly
+# ********
 # from ga4gh.dos.client import Client
 # local_client = Client('http://localhost:8080/', config=config)
 # client = local_client.client
 # models = local_client.models
 
-
-# from bravado.swagger_model import load_file
-
+# ********
+# new - use our modified version of the swagger file
+# e.g.
+# ...
+# "security": [
+#   {"basicAuth": []}
+# ],
+# ...
+# ********
 SWAGGER_FILENAME = 'data_objects_service.swagger.json'
 SWAGGER_PATH = os.path.join('dos_connect/server', SWAGGER_FILENAME)
 
@@ -50,6 +59,61 @@ class Client:
 local_client = Client('http://localhost:8080/')
 client = local_client.client
 models = local_client.models
+
+
+def test_duplicate_checksums():
+    """ validate expected behavior of multiple creates of same checksum """
+    Checksum = models.get_model('ga4ghChecksum')
+    URL = models.get_model('ga4ghURL')
+    CreateDataObjectRequest = models.get_model('ga4ghCreateDataObjectRequest')
+    DataObject = models.get_model('ga4ghCreateDataObjectRequest')
+    checksum = str(uuid.uuid1())
+    # CreateDataObject
+    print("..........Create an object............")
+    create_data_object = DataObject(
+        name="abc",
+        size=12345,
+        checksums=[Checksum(checksum=checksum, type="md5")],
+        urls=[URL(url="a"), URL(url="b")])
+    create_request = CreateDataObjectRequest(data_object=create_data_object)
+    create_response = client.CreateDataObject(body=create_request).result()
+    data_object_id = create_response['data_object_id']
+    print(data_object_id)
+    print("..........Create a 2nd  object............")
+    create_data_object = DataObject(
+        name="xyz",
+        size=12345,
+        checksums=[Checksum(checksum=checksum, type="md5")],
+        urls=[URL(url="c")])
+    create_request = CreateDataObjectRequest(data_object=create_data_object)
+    create_response = client.CreateDataObject(body=create_request).result()
+    data_object_id = create_response['data_object_id']
+    print(data_object_id)
+    # ListDataObjects
+    print("..........List Data Objects...............")
+    ListDataObjectsRequest = models.get_model('ga4ghListDataObjectsRequest')
+    next_page_token = None
+    count = 0
+    urls = []
+    names = []
+    while(True):
+        list_request = ListDataObjectsRequest(checksum={'checksum': checksum})
+        list_request.page_size = 10
+        if next_page_token:
+            list_request.next_page_token = next_page_token
+        list_response = client.ListDataObjects(body=list_request).result()
+        next_page_token = list_response.next_page_token
+        for data_object in list_response.data_objects:
+            count = count + 1
+            urls.extend([url.url for url in data_object.urls])
+            names.append(data_object.name)
+        if not list_response.next_page_token:
+            break
+    assert count == 2, 'did not return all objects for {}'.format(checksum)
+    for url in ['a', 'b', 'c']:
+        assert url in urls, 'expected {} in urls'.format(url)
+    for name in ['abc', 'xyz']:
+        assert name in names, 'expected {} in names'.format(name)
 
 
 def test_simple():

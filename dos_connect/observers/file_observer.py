@@ -61,6 +61,7 @@ class DOSHandler(PatternMatchingEventHandler):
 
         if not event.event_type == 'deleted':
             f = os.stat(event.src_path)
+            # is this a regular file?
             if not S_ISREG(f.st_mode):
                 return
 
@@ -87,6 +88,9 @@ class DOSHandler(PatternMatchingEventHandler):
         if (event.is_directory):
             return
         data_object = self.to_dos(event)
+        # not a regular file
+        if not data_object:
+            return
         before_store(args, data_object)
         store(args, data_object)
 

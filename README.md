@@ -12,7 +12,7 @@ For development and proof of concept, a docker-compose setup is provided.
 A elastic-sink service is provided to illustrate the consuming from the topic and maintaining a user facing query store.
 
 
-### install 
+### install
 
 ```
 pip install -r requirements.txt --process-dependency-links -I
@@ -103,4 +103,10 @@ pip install -r requirements.txt --process-dependency-links -I
   ```
 
 ### TODO
-  Observe azure ...
+  dos_schemas
+  * security
+  * add 404 response type
+
+### testing
+  # start server
+ py.test --no-print-logs test/test_server.py

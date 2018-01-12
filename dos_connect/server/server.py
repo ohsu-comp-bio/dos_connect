@@ -1,6 +1,7 @@
-# Simple server implementation
-import os
+#!/usr/bin/python
+# -*- encoding: utf-8 -*-
 
+# Simple server implementation
 import connexion
 from flask_cors import CORS
 

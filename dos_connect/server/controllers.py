@@ -1,190 +1,24 @@
-import uuid
-import datetime
-
-from dateutil.parser import parse
-
-from elasticsearch import Elasticsearch
-from elasticsearch_dsl import Search, Q
 
 import logging
 import sys
-import os
-from decorator import decorator
-import flask
 
-log = logging.getLogger(__name__)
-log.setLevel(logging.DEBUG)
+from dateutil.parser import parse
 
-# # turn on max debugging
-ch = logging.StreamHandler(sys.stdout)
-ch.setLevel(logging.DEBUG)
-# formatter = logging.Formatter(
-#             '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-# ch.setFormatter(formatter)
-log.addHandler(ch)
-# # allow printing of POST body as well.
-import httplib  # noqa
-httplib.HTTPConnection.debuglevel = logging.DEBUG
-logging.getLogger("urllib3").setLevel(logging.DEBUG)
+# customize for your needs
+from backend import save, update, delete, search
+from authorizer import authorization_check
+from log_setup import init_logging
+from utils import AttributeDict, now, add_created_timestamps, \
+                  add_updated_timestamps
 
 
 DEFAULT_PAGE_SIZE = 100
 
-# connect to elastic
-client = Elasticsearch()
-assert client.info()
-# check persistence options in env
-ES_REFRESH_ON_PERSIST = os.getenv('ES_REFRESH_ON_PERSIST', 'False')
-ES_REFRESH_ON_PERSIST = not (ES_REFRESH_ON_PERSIST == 'False')
-if not ES_REFRESH_ON_PERSIST:
-    log.info('ES_REFRESH_ON_PERSIST not set (default),'
-             ' ES writes defer index refresh')
-else:
-    log.info('ES_REFRESH_ON_PERSIST set, ES writes will refresh index')
+init_logging()
+log = logging.getLogger(__name__)
 
-
-# allow us to use dot notation for dicts
-class AttributeDict(dict):
-    __getattr__ = dict.__getitem__
-    __setattr__ = dict.__setitem__
-
-
-# auth implementation
-def check_auth(username, password):
-    '''This function is called to check if a username /
-    password combination is valid.'''
-    log.info('check_auth {} {}'.format(username, password))
-    return username == 'admin' and password == 'secret'
-
-
-def authenticate():
-    '''Sends a 401 response that enables basic auth'''
-    return flask.Response('You have to login with proper credentials', 401,
-                          {'WWW-Authenticate': 'Basic realm="Login Required"'})
-
-
-@decorator
-def requires_auth(f, *args, **kwargs):
-    auth = flask.request.authorization
-    log.info('requires_auth {}'.format(auth))
-    if not auth or not check_auth(auth.username, auth.password):
-        return authenticate()
-    return f(*args, **kwargs)
-
-# Application logic
-
-
-def now():
-    """
-    get string iso date in zulu
-    """
-    return str(datetime.datetime.now().isoformat("T") + "Z")
-
-
-def add_created_timestamps(doc):
-    """
-    Adds created and updated timestamps to the document.
-    """
-    doc['created'] = now()
-    doc['updated'] = now()
-    return doc
-
-
-def add_updated_timestamps(doc):
-    """
-    Adds updated timestamp to the document.
-    """
-    doc['updated'] = now()
-    return doc
-
-
-def save(doc, index='data_objects'):
-    """
-    save the body in the index, ensure version and id set
-    """
-    version = doc.get('version', None)
-    if not version:
-        doc['version'] = now()
-    if not doc.get('id', None):
-        temp_id = str(uuid.uuid4())
-        doc['id'] = temp_id
-    # create index, use index name singular as doc type
-    # do not wait for search available See
-    # https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-refresh.html
-    result = client.index(index=index,
-                          body=doc,
-                          doc_type=index[:-1],
-                          timeout='120s',
-                          request_timeout=120,
-                          op_type='index',
-                          refresh=ES_REFRESH_ON_PERSIST
-                          )
-    return doc
-
-
-def update(_id, doc, index='data_objects'):
-    """
-    partial update using the es contructed _id
-    """
-    log.debug(doc)
-    result = client.update(index=index,
-                           doc_type=index[:-1],
-                           id=_id,
-                           body={"doc": doc},
-                           refresh=ES_REFRESH_ON_PERSIST
-                           )
-    log.debug(result)
-
-
-def search(properties, index='data_objects', size=DEFAULT_PAGE_SIZE,
-           offset=0, include_total=False):
-    """
-    get all objects that match
-    if include_total set, return tuple (hit, total)
-    """
-    s = Search(using=client, index=index)
-    clauses = ['*']
-    for k in properties.keys():
-        v = properties[k]
-        # quote everything except booleans
-        if not isinstance(v, bool):
-            clauses.append('+{}:"{}"'.format(k, v))
-        else:
-            clauses.append('+{}:{}'.format(k, str(v).lower()))
-    s = s.query("query_string", query=' '.join(clauses))
-    s = s[offset:offset+size]
-    # s = s.sort('-updated').params(preserve_order=True)
-    # log.debug(s.to_dict())
-    # for _, hit in enumerate(s.scan()):
-    #     log.debug(hit.to_dict())
-    #     yield hit
-    s = s.sort('-updated')
-    log.debug(s.to_dict())
-    response = s.execute()
-    total = response.hits.total
-    for _, hit in enumerate(response):
-        log.debug(hit.to_dict())
-        if include_total:
-            yield (hit, total)
-        else:
-            yield hit
-
-
-def delete(properties, index='data_objects'):
-    """
-    delete item from index
-    """
-    s = Search(using=client, index=index)
-    clauses = []
-    for k in properties.keys():
-        v = properties[k]
-        clauses.append('+{}:"{}"'.format(k, v))
-    s = s.query("query_string", query=' '.join(clauses))
-    log.debug(s.to_dict())
-    s.delete()
 
 # Data Object Controllers
-
 
 def CreateDataObject(**kwargs):
     """
@@ -302,7 +136,7 @@ def ListDataObjects(**kwargs):
 
 # Data Bundle Controllers
 
-@requires_auth
+@authorization_check
 def CreateDataBundle(**kwargs):
     """
     update timestamps, ensure version, persist
