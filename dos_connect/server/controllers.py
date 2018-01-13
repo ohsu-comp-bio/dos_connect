@@ -1,25 +1,42 @@
 
 import logging
 import sys
-
+import json
+import os
 from dateutil.parser import parse
+from importlib import import_module
 
 # customize for your needs
-from backend import save, update, delete, search
-from authorizer import authorization_check
 from log_setup import init_logging
 from utils import AttributeDict, now, add_created_timestamps, \
                   add_updated_timestamps
 
+# from authorizer import authorization_check
+authorizer_name = os.getenv('AUTHORIZER', 'dos_connect.server.noop_authorizer')
+authorizer = import_module(authorizer_name)
+authorization_check = getattr(authorizer, 'authorization_check')
+
+# from backend import save, update, delete, search
+backend_name = os.getenv('BACKEND', 'dos_connect.server.memory_backend')
+backend = import_module(backend_name)
+save = getattr(backend, 'save')
+update = getattr(backend, 'update')
+delete = getattr(backend, 'delete')
+search = getattr(backend, 'search')
 
 DEFAULT_PAGE_SIZE = 100
 
 init_logging()
 log = logging.getLogger(__name__)
+log.info('using authorizer {} to change set AUTHORIZER envvar'
+         .format(authorizer_name))
+log.info('using backend {} to change set BACKEND envvar'
+         .format(backend_name))
 
 
 # Data Object Controllers
 
+@authorization_check
 def CreateDataObject(**kwargs):
     """
     update timestamps, ensure version, persist
@@ -31,6 +48,7 @@ def CreateDataObject(**kwargs):
     return({"data_object_id": doc.id}, 200)
 
 
+@authorization_check
 def GetDataObject(**kwargs):
     """
     get by id
@@ -49,6 +67,7 @@ def GetDataObject(**kwargs):
     return("No Content", 404)
 
 
+@authorization_check
 def GetDataObjectVersions(**kwargs):
     """
     get all versions
@@ -64,6 +83,7 @@ def GetDataObjectVersions(**kwargs):
         return("No Content", 404)
 
 
+@authorization_check
 def UpdateDataObject(**kwargs):
     """
     version dataobject
@@ -94,6 +114,7 @@ def UpdateDataObject(**kwargs):
         return("No Content", 404)
 
 
+@authorization_check
 def DeleteDataObject(**kwargs):
     """
     delete by id (all versions)
@@ -103,6 +124,7 @@ def DeleteDataObject(**kwargs):
     return({"data_object_id": properties.id}, 200)
 
 
+@authorization_check
 def ListDataObjects(**kwargs):
     """
     search by keys
@@ -113,16 +135,6 @@ def ListDataObjects(**kwargs):
     for property_name in property_names:
         if body.get(property_name, None):
             properties[property_name] = body.get(property_name, None)
-    #  see https://github.com/ga4gh/data-object-schemas/issues/33
-    if 'alias' in properties:
-        properties.aliases = properties.alias
-        del properties['alias']
-    if 'checksum' in properties:
-        properties['checksums.checksum'] = properties.checksum['checksum']
-        del properties['checksum']
-    if 'url' in properties:
-        properties['urls.url'] = properties.url
-        del properties['url']
     properties.current = True  # only current, no previous
     page_size = int(body.get('page_size', DEFAULT_PAGE_SIZE))
     offset = int(body.get('next_page_token', 0))
@@ -143,10 +155,12 @@ def CreateDataBundle(**kwargs):
     """
     body = AttributeDict(kwargs['body']['data_bundle'])
     doc = add_created_timestamps(body)
+    doc.current = True
     doc = save(doc, 'data_bundles')
     return({"data_bundle_id": doc.id}, 200)
 
 
+@authorization_check
 def GetDataBundle(**kwargs):
     """
     get by id
@@ -165,6 +179,7 @@ def GetDataBundle(**kwargs):
     return("No Content", 404)
 
 
+@authorization_check
 def UpdateDataBundle(**kwargs):
     """
     get all versions
@@ -180,6 +195,11 @@ def UpdateDataBundle(**kwargs):
             data_bundle.version = new_version
         else:
             data_bundle.version = now()
+        # update old unset current
+        update(_id=old_data_bundle.meta.id, index='data_bundles',
+               doc={'current': False})
+        # new is current
+        data_bundle.current = True
         data_bundle.id = old_data_bundle.id
         save(data_bundle, 'data_bundles')
         return({"data_bundle_id": properties.id}, 200)
@@ -188,6 +208,7 @@ def UpdateDataBundle(**kwargs):
         return("No Content", 404)
 
 
+@authorization_check
 def GetDataBundleVersions(**kwargs):
     """
     version dataobject
@@ -203,6 +224,7 @@ def GetDataBundleVersions(**kwargs):
         return("No Content", 404)
 
 
+@authorization_check
 def DeleteDataBundle(**kwargs):
     """
     delete by id (all versions)
@@ -212,27 +234,17 @@ def DeleteDataBundle(**kwargs):
     return(kwargs, 200)
 
 
+@authorization_check
 def ListDataBundles(**kwargs):
     """
     search by keys
     """
     body = kwargs.get('body')
     property_names = ['url', 'checksum', 'alias']
-    properties = {}
+    properties = AttributeDict({})
     for property_name in property_names:
         if body.get(property_name, None):
             properties[property_name] = body.get(property_name, None)
-    #  see https://github.com/ga4gh/data-object-schemas/issues/33
-    if 'alias' in properties:
-        properties['aliases'] = properties['alias']
-        del properties['alias']
-    if 'checksum' in properties:
-        properties['checksums.checksum'] = properties['checksum']['checksum']
-        del properties['checksum']
-    if 'url' in properties:
-        properties['urls.url'] = properties['url']
-        del properties['url']
-
     page_size = int(body.get('page_size', DEFAULT_PAGE_SIZE))
     data_objects = [x.to_dict() for x in search(properties, 'data_bundles',
                                                 size=page_size)]

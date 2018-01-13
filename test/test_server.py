@@ -3,62 +3,29 @@ import logging
 import sys
 import os
 import uuid
+
+# setup connection, models and security
 from bravado.requests_client import RequestsClient
-from bravado.client import SwaggerClient
+from dos_connect.client.dos_client import Client
 
-root = logging.getLogger()
-root.setLevel(logging.WARNING)
-ch = logging.StreamHandler(sys.stdout)
-ch.setLevel(logging.WARNING)
-formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-ch.setFormatter(formatter)
-root.addHandler(ch)
-# from httplib import HTTPConnection
-# # allow printing of POST body as well.
-# HTTPConnection.debuglevel = logging.DEBUG
-# logging.getLogger("urllib3").setLevel(logging.DEBUG)
-
-# ********
-# old - use dos client directly
-# ********
-# from ga4gh.dos.client import Client
-# local_client = Client('http://localhost:8080/', config=config)
-# client = local_client.client
-# models = local_client.models
-
-# ********
-# new - use our modified version of the swagger file
-# e.g.
-# ...
-# "security": [
-#   {"basicAuth": []}
-# ],
-# ...
-# ********
-SWAGGER_FILENAME = 'data_objects_service.swagger.json'
-SWAGGER_PATH = os.path.join('dos_connect/server', SWAGGER_FILENAME)
-
-DEFAULT_CONFIG = {
-    'validate_requests': False,
-    'validate_responses': False
-}
-
-
-class Client:
-    def __init__(self, url, config=DEFAULT_CONFIG):
-        swagger_path = '{}/swagger.json'.format(url.rstrip("/"))
-        self._config = config
-        http_client = RequestsClient()
-        http_client.set_basic_auth('localhost', 'admin', 'secret')
-        self.models = SwaggerClient.from_url(swagger_path, config=config,
-                                             http_client=http_client)
-        self.client = self.models.DataObjectService
-
-
-local_client = Client('http://localhost:8080/')
+http_client = RequestsClient()
+# http_client.set_basic_auth('localhost', 'admin', 'secret')
+http_client.set_api_key('localhost', 'XXX-YYY-ZZZ', param_in='header')
+local_client = Client('https://localhost/', http_client=http_client)
 client = local_client.client
 models = local_client.models
+
+# setup logging
+root = logging.getLogger()
+root.setLevel(logging.ERROR)
+logging.captureWarnings(True)
+
+# ch = logging.StreamHandler(sys.stdout)
+# ch.setLevel(logging.DEBUG)
+# formatter = logging.Formatter(
+#             '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+# ch.setFormatter(formatter)
+# root.addHandler(ch)
 
 
 def test_duplicate_checksums():
@@ -238,6 +205,7 @@ def test_data_objects():
     list_request = ListDataObjectsRequest()
     list_response = client.ListDataObjects(body=list_request).result()
     print(len(list_response.data_objects))
+    assert len(list_response.data_objects) > 0
 
     # Get all versions of a DataObject
     print("..........Get all Versions...............")

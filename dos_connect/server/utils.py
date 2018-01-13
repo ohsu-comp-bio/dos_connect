@@ -2,6 +2,7 @@
 # -*- encoding: utf-8 -*-
 
 import datetime
+import json
 
 
 class AttributeDict(dict):
@@ -10,6 +11,9 @@ class AttributeDict(dict):
     """
     __getattr__ = dict.__getitem__
     __setattr__ = dict.__setitem__
+
+    def to_dict(self):
+        return json.loads(json.dumps(self))
 
 
 def now():

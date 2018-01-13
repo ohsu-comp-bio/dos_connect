@@ -15,8 +15,8 @@
     "application/json"
   ],
   "security": [
-    {"basicAuth": []}
-  ],  
+    {"APIKeyHeader": []}
+  ],
   "paths": {
     "/ga4gh/dos/v1/databundles": {
       "post": {
@@ -813,6 +813,16 @@
   "securityDefinitions": {
     "basicAuth": {
       "type": "basic"
+    },
+    "APIKeyHeader": {
+      "type": "apiKey",
+      "in": "header",
+      "name": "X-API-Key"
+    },
+    "APIKeyQueryParam": {
+      "type": "apiKey",
+      "in": "query",
+      "name": "api_key"
     }
   }
 }

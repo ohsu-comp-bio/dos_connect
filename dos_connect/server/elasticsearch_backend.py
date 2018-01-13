@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- encoding: utf-8 -*-
 
-# customize for your backend
+# customize/override for your backend
 
 
 import logging
@@ -77,6 +77,18 @@ def search(properties, index='data_objects', size=DEFAULT_PAGE_SIZE,
     get all objects that match
     if include_total set, return tuple (hit, total)
     """
+    #  see https://github.com/ga4gh/data-object-schemas/issues/33
+    # make seach parameters ES friendly
+    if 'alias' in properties:
+        properties.aliases = properties.alias
+        del properties['alias']
+    if 'checksum' in properties:
+        properties['checksums.checksum'] = properties.checksum['checksum']
+        del properties['checksum']
+    if 'url' in properties:
+        properties['urls.url'] = properties.url
+        del properties['url']
+    # by default search for everything
     s = Search(using=client, index=index)
     clauses = ['*']
     for k in properties.keys():
@@ -87,13 +99,14 @@ def search(properties, index='data_objects', size=DEFAULT_PAGE_SIZE,
         else:
             clauses.append('+{}:{}'.format(k, str(v).lower()))
     s = s.query("query_string", query=' '.join(clauses))
+    # get current page
     s = s[offset:offset+size]
+    # sorted by updated desc
     s = s.sort('-updated')
-    log.debug(s.to_dict())
     response = s.execute()
     total = response.hits.total
     for _, hit in enumerate(response):
-        log.debug(hit.to_dict())
+        # for paging return the total number of matches
         if include_total:
             yield (hit, total)
         else:

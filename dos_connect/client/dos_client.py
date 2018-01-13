@@ -1,24 +1,23 @@
-# Simple client usage via bravo
 
-import os
 from bravado.client import SwaggerClient
-from bravado.swagger_model import load_file
-config = {
+
+
+DEFAULT_CONFIG = {
     'validate_requests': False,
-    'validate_responses': False,
-    'use_models': False
+    'validate_responses': False
 }
 
-# URL = 'http://localhost:8080'
-# models = SwaggerClient.from_url('{}/swagger.json'.format(URL), config=config)
 
-
-def initialize(args):
-    this_dir, this_filename = os.path.split(__file__)
-    spec_dict = load_file(os.path.join(
-                          this_dir, 'data_objects_service.swagger.json'))
-    spec_dict['host'] = args.webserver_url
-
-    models = SwaggerClient.from_spec(spec_dict,
-                                     config=config)
-    return models
+class Client:
+    """
+    simple wrapper around bravado swagger Client see
+    https://github.com/Yelp/bravado/blob/master/docs/source/configuration.rst#client-configuration
+    https://github.com/Yelp/bravado#example-with-basic-authentication
+    """
+    def __init__(self, url, config=DEFAULT_CONFIG, http_client=None):
+        swagger_path = '{}/swagger.json'.format(url.rstrip("/"))
+        self._config = config
+        self.models = SwaggerClient.from_url(swagger_path,
+                                             config=config,
+                                             http_client=http_client)
+        self.client = self.models.DataObjectService

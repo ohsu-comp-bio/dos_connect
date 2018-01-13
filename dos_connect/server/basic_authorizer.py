@@ -15,7 +15,7 @@ log = logging.getLogger(__name__)
 def check_auth(username, password):
     '''This function is called to check if a username /
     password combination is valid.'''
-    log.info('check_auth {} {}'.format(username, password))
+    # log.info('check_auth {} {}'.format(username, password))
     return username == 'admin' and password == 'secret'
 
 
@@ -27,8 +27,9 @@ def authenticate():
 
 @decorator
 def authorization_check(f, *args, **kwargs):
+    '''wrap functions for authorization'''
     auth = flask.request.authorization
-    log.info('authorization_check {}'.format(auth))
+    # log.info('authorization_check {}'.format(auth))
     if not auth or not check_auth(auth.username, auth.password):
         return authenticate()
     return f(*args, **kwargs)
