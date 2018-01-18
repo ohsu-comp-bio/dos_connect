@@ -120,3 +120,4 @@ ENV/
 
 # certs
 certs/
+*.htpasswd

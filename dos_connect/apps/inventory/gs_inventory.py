@@ -8,8 +8,8 @@ import urllib
 import time
 import pprint
 import sys
-from customizations import store, custom_args
-from .. import common_args, common_logging
+from datetime import datetime
+from .. import common_args, common_logging,  store, custom_args
 
 
 def to_dos(bucket, record):
@@ -32,8 +32,8 @@ def to_dos(bucket, record):
     return {
       "id": _id,
       "file_size": int(record['size']),
-      "created": record['timeCreated'],
-      "updated": record['updated'],
+      "created": datetime.strptime(record['timeCreated'], "%Y-%m-%dT%H:%M:%S.%fZ"),
+      "updated": datetime.strptime(record['updated'], "%Y-%m-%dT%H:%M:%S.%fZ"),
       # TODO multipart ...
       "checksums": [{"checksum": record['md5Hash'], 'type': 'md5'}],
       "urls": _urls

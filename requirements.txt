@@ -3,7 +3,7 @@ azure-storage-blob==0.37.0
 azure-storage-queue==0.37.0
 boto3==1.4.4
 connexion==1.1.16
-google-cloud-pubsub==0.28.4
-google-cloud-storage==1.5.0
+google-cloud-pubsub==0.30.1
+google-cloud-storage==1.6.0
 watchdog==0.8.3
 git+git://github.com/ga4gh/data-object-schemas@master

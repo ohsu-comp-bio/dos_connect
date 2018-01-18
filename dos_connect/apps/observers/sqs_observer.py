@@ -3,9 +3,9 @@ import boto3
 import argparse
 import logging
 import urllib
-from customizations import store, custom_args
 import sys
-from .. import common_args, common_logging
+from .. import common_args, common_logging,  store, custom_args
+from datetime import datetime
 
 # Boto3 will check these environment variables for credentials:
 # AWS_ACCESS_KEY_ID The access key for your AWS account.
@@ -16,6 +16,7 @@ from .. import common_args, common_logging
 #  python sqs_consumer.py
 # mainipulate the bucket via
 # AWS_ACCESS_KEY_ID=. AWS_SECRET_ACCESS_KEY=. aws s3 cp text  s3://dos-testing
+
 
 def to_dos(record):
     """ given a message from the source, map to a new data_object """
@@ -40,12 +41,13 @@ def to_dos(record):
         "system_metadata": system_metadata,
         "user_metadata": user_metadata,
     }
+    eventTime = datetime.strptime(record['eventTime'], "%Y-%m-%dT%H:%M:%S.%fZ")
     data_object = {
       "id": _id,
       "file_size": obj.get('size', None),
       # The time, in ISO-8601,when S3 finished processing the request,
-      "created": record['eventTime'],
-      "updated": record['eventTime'],
+      "created": eventTime,
+      "updated": eventTime,
       # TODO multipart ...
       # https://forums.aws.amazon.com/thread.jspa?messageID=203436&#203436
       "checksums": [{'checksum': obj.get('eTag', None), 'type': 'md5'}],
@@ -71,19 +73,21 @@ def process(args, message):
     for record in sqs['Records']:
         if not record['eventSource'] == "aws:s3":
             continue
+        s3 = record['s3']
+        key = s3['object']['key']
+        bucket_name = s3['bucket']['name']
         data_object = to_dos(record)
         if not (data_object['urls'][0]['system_metadata']['event_type'] ==
                 "ObjectRemoved:Delete"):
             try:
-                head = client.head_object(Bucket=s3['bucket']['name'],
-                                          Key=obj['key'])
+                head = client.head_object(Bucket=bucket_name,
+                                          Key=key)
                 if ('Metadata' in head):
                     data_object['urls'][0]['user_metadata'] = head['Metadata']
             except Exception as e:
                 logger.info("head failed. {} {} {}"
-                            .format(s3['bucket']['name'], obj['key'], e))
+                            .format(bucket_name, key, e))
 
-        logger.debug(json.dumps(data_object))
         store(args, data_object)
     return True
 
@@ -106,7 +110,7 @@ def consume(args):
                 if process(args, message):
                     message.delete()
         except Exception as e:
-            logger.error(e)
+            logger.exception(e)
 
 
 def populate_args(argparser):

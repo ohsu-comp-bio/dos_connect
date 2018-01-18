@@ -16,9 +16,7 @@ import argparse
 from stat import *
 import json
 import re
-from file_observer_customizations import md5sum, user_metadata, before_store
-from customizations import store, custom_args
-from .. import common_args, common_logging
+from .. import common_args, common_logging,  store, custom_args, md5sum, before_store, user_metadata  # noqa
 
 
 class DOSHandler(PatternMatchingEventHandler):
@@ -73,11 +71,12 @@ class DOSHandler(PatternMatchingEventHandler):
               # The time, in ISO-8601,when S3 finished processing the request,
               "created":  ctime,
               "updated":  mtime,
-              "checksums": [{"checksum": md5sum(event.src_path, _url),
+              "checksums": [{"checksum": md5sum(src_path=event.src_path,
+                                                url=_url),
                              'type': 'md5'}],
               "urls": [{
                   'url': _url,
-                  "user_metadata": user_metadata(event.src_path),
+                  "user_metadata": user_metadata(event=event),
                   "system_metadata": {"event_type":
                                       event_methods.get(event.event_type),
                                       "bucket_name": self.monitor_directory}}]
@@ -91,7 +90,6 @@ class DOSHandler(PatternMatchingEventHandler):
         # not a regular file
         if not data_object:
             return
-        before_store(args, data_object)
         store(args, data_object)
 
     def path2url(self, path):
@@ -132,7 +130,8 @@ if __name__ == "__main__":
     argparser.add_argument('--polling_interval', '-pi',
                            help='interval in seconds between polling '
                                 'the file system',
-                           default=60)
+                           default=60,
+                           type=int)
 
     argparser.add_argument('monitor_directory',
                            help='''directory to monitor''',

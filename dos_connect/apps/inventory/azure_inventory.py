@@ -15,9 +15,10 @@ from urlparse import urlparse
 import sys
 import datetime
 import attr
+from datetime import datetime
 
 from customizations import store, custom_args
-from .. import common_args, common_logging
+from .. import common_args, common_logging,  store, custom_args
 
 
 BLOB_SERVICE = None
@@ -25,6 +26,7 @@ BLOB_SERVICE = None
 
 # Instantiates a storage client
 def _blob_service():
+    global BLOB_SERVICE
     if not BLOB_SERVICE:
         BLOB_SERVICE = BlockBlobService(
             account_name=os.environ.get('BLOB_STORAGE_ACCOUNT'),
@@ -48,7 +50,7 @@ def to_dos(url, blob):
     system_metadata['event_type'] = 'ObjectCreated:Put'
     _urls = [{'url': url, 'system_metadata': system_metadata}]
 
-    last_modified = str(blob.properties.last_modified).replace(' ', 'T')
+    last_modified = blob.properties.last_modified
     return {
       "id": _id,
       "file_size": blob.properties.content_length,

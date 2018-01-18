@@ -9,6 +9,7 @@ Provides
 import argparse
 import logging
 import sys
+import requests.packages.urllib3
 
 
 def common_args(argparser):
@@ -28,3 +29,5 @@ def common_logging(args):
         logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
     else:
         logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+    # https://github.com/shazow/urllib3/issues/523
+    requests.packages.urllib3.disable_warnings()

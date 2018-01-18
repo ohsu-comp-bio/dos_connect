@@ -1,6 +1,9 @@
-elasticsearch-dsl==6.0.0
-elasticsearch==6.0.0
-kafka-python==1.3.3
 Flask-Cors==2.0.1
 pyOpenSSL==17.5.0
 arrow==0.12.0
+# for elasticsearch_backend
+elasticsearch-dsl==6.0.0
+elasticsearch==6.0.0
+kafka-python==1.3.3
+# for basic_authorizer
+passlib==1.7.1

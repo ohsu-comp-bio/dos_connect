@@ -1,4 +1,4 @@
-# With app.py running start this demo
+# With app.py running start this test
 import logging
 import sys
 import os

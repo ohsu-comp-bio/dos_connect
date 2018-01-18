@@ -6,6 +6,7 @@
 import flask
 import logging
 from decorator import decorator
+from passlib.apache import HtpasswdFile
 
 log = logging.getLogger(__name__)
 
@@ -16,7 +17,8 @@ def check_auth(username, password):
     '''This function is called to check if a username /
     password combination is valid.'''
     # log.info('check_auth {} {}'.format(username, password))
-    return username == 'admin' and password == 'secret'
+    ht = HtpasswdFile("user.htpasswd")
+    return ht.check_password(username, password)
 
 
 def authenticate():
