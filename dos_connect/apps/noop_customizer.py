@@ -2,7 +2,7 @@
 
 
 def user_metadata(**kwargs):
-    """ noop return None """
+    """ noop return user metadata """
     return None
 
 
@@ -12,6 +12,5 @@ def before_store(**kwargs):
 
 
 def md5sum(**kwargs):
-    """ noop return data_object """
-    print kwargs
+    """ noop return md5 """
     return None
