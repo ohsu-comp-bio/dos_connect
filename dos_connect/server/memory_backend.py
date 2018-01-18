@@ -87,6 +87,7 @@ def search(properties, index='data_objects', size=DEFAULT_PAGE_SIZE,
             added = False
             for checksum in doc.checksums:
                 if properties.checksum['checksum'] == checksum['checksum']:
+                    print 'added checksum', properties.checksum['checksum']
                     hits.append(doc)
                     added = True
             if added:
@@ -95,19 +96,23 @@ def search(properties, index='data_objects', size=DEFAULT_PAGE_SIZE,
             added = False
             for url in doc.urls:
                 if properties.url == url['url']:
+                    print '++++'
                     hits.append(doc)
                     added = True
             if added:
                 continue
         if 'id' in properties:
             if properties.id == doc.id and doc.current:
+                print '+++'
                 hits.append(doc)
                 continue
-        if 'current' in properties:
-            if doc.current:
-                hits.append(doc)
-                continue
+        # if 'current' in properties:
+        #     if doc.current:
+        #         print '++'
+        #         hits.append(doc)
+        #         continue
         if len(properties.keys()) == 0:
+            print '+'
             hits.append(doc)
             continue
 

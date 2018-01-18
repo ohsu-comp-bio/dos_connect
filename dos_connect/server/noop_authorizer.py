@@ -16,5 +16,5 @@ log = logging.getLogger(__name__)
 def authorization_check(f, *args, **kwargs):
     '''wrap functions for authorization always OK'''
     auth = flask.request.authorization
-    log.info('authorization_check {}'.format(auth))
+    # log.info('authorization_check {}'.format(auth))
     return f(*args, **kwargs)

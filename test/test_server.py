@@ -11,7 +11,7 @@ from dos_connect.client.dos_client import Client
 http_client = RequestsClient()
 # http_client.set_basic_auth('localhost', 'admin', 'secret')
 http_client.set_api_key('localhost', 'XXX-YYY-ZZZ', param_in='header')
-local_client = Client('https://localhost/', http_client=http_client)
+local_client = Client('http://localhost:8080/', http_client=http_client)
 client = local_client.client
 models = local_client.models
 

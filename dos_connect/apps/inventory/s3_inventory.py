@@ -8,7 +8,7 @@ import argparse
 import urllib
 from botocore.client import Config
 from urlparse import urlparse
-from .. import common_args, common_logging,  store, custom_args
+from .. import common_args, common_logging,  store, custom_args, md5sum
 
 logger = logging.getLogger('s3_inventory')
 
@@ -56,7 +56,8 @@ def to_dos(endpoint_url, region, bucket_name, record, metadata):
           "created":  record['LastModified'],
           "updated":  record['LastModified'],
           # TODO multipart ...
-          "checksums": [{'checksum': etag, 'type': 'md5'}],
+          "checksums": [{'checksum': md5sum(etag=etag,
+                         bucket_name=bucket_name, key=_id), 'type': 'md5'}],
           "urls": [_url]
         }
 

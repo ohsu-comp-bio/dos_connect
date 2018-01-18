@@ -13,4 +13,5 @@ def before_store(**kwargs):
 
 def md5sum(**kwargs):
     """ noop return md5 """
-    return None
+    etag = kwargs.get('etag', None)
+    return etag

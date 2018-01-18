@@ -4,7 +4,7 @@ import argparse
 import logging
 import urllib
 import sys
-from .. import common_args, common_logging,  store, custom_args
+from .. import common_args, common_logging,  store, custom_args, md5sum
 from datetime import datetime
 
 # Boto3 will check these environment variables for credentials:
@@ -50,7 +50,10 @@ def to_dos(record):
       "updated": eventTime,
       # TODO multipart ...
       # https://forums.aws.amazon.com/thread.jspa?messageID=203436&#203436
-      "checksums": [{'checksum': obj.get('eTag', None), 'type': 'md5'}],
+      "checksums": [{'checksum': md5sum(key=obj['key']
+                                        bucket_name=system_metadata['bucket_name'],
+                                        etag=obj.get('eTag', None)),
+                     'type': 'md5'}],
       # http://docs.aws.amazon.com/AmazonS3/latest/dev/UsingBucket.html#access-bucket-intro
       "urls": [_url],
     }

@@ -121,3 +121,4 @@ ENV/
 # certs
 certs/
 *.htpasswd
+.chalice
