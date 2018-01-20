@@ -50,11 +50,10 @@ def to_dos(endpoint_url, region, bucket_name, record, metadata):
         if etag.startswith('%22') and etag.endswith('%22'):
             etag = etag[3:-3]
         return {
-          "id": _id,
           "file_size": record['Size'],
           # The time, in ISO-8601,when S3 finished processing the request,
-          "created":  record['LastModified'],
-          "updated":  record['LastModified'],
+          "created":  record['LastModified'].isoformat(),
+          "updated":  record['LastModified'].isoformat(),
           # TODO multipart ...
           "checksums": [{'checksum': md5sum(etag=etag,
                          bucket_name=bucket_name, key=_id), 'type': 'md5'}],

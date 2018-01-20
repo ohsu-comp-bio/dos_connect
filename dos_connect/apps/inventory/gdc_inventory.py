@@ -90,7 +90,6 @@ def gdc_to_ga4gh(gdc):
     URL = models.get_model('ga4ghURL')
     Checksum = models.get_model('ga4ghChecksum')
     return DataObject(
-        id=gdc.get('md5sum'),
         checksums=[Checksum(checksum=gdc.get('md5sum'), type='md5')],
         file_name=gdc.get('file_name'),
         file_size=str(gdc.get('file_size')),

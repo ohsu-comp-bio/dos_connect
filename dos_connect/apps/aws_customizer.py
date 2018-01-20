@@ -20,7 +20,6 @@ def before_store(**kwargs):
 
 def md5sum(**kwargs):
     """ return md5 by calling our lambda """
-    logger.error(kwargs)
     etag = kwargs.get('etag', None)
     bucket_name = kwargs.get('bucket_name', None)
     key = kwargs.get('key', None)
@@ -33,3 +32,12 @@ def md5sum(**kwargs):
     logger.error(response)
     assert 'md5sum' in response
     return response['md5sum']
+
+
+def id(**kwargs):
+    """ use the checksum as the key """
+    print kwargs
+    data_object = kwargs.get('data_object', None)
+    logger.error('id')
+    logger.error(data_object)
+    return data_object.checksums[0].checksum

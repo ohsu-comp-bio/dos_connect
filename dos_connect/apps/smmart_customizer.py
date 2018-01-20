@@ -43,7 +43,7 @@ def user_metadata(**kwargs):
 def before_store(**kwargs):
     """ obsure sensitive data, fetch metadata"""
     logger = logging.getLogger(__name__)
-    data_object = kwargs.get('data_object')
+    data_object = kwargs.get('data_object_dict')
     url = data_object['urls'][0]['url']
     id = data_object['id']
     clear = _metadata(url)

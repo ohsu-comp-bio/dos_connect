@@ -10,7 +10,7 @@ from dos_connect.client.dos_client import Client
 
 http_client = RequestsClient()
 # http_client.set_basic_auth('localhost', 'admin', 'secret')
-http_client.set_api_key('localhost', 'XXX-YYY-ZZZ', param_in='header')
+# http_client.set_api_key('localhost', 'XXX-YYY-ZZZ', param_in='header')
 local_client = Client('http://localhost:8080/', http_client=http_client)
 client = local_client.client
 models = local_client.models
@@ -20,12 +20,29 @@ root = logging.getLogger()
 root.setLevel(logging.ERROR)
 logging.captureWarnings(True)
 
-# ch = logging.StreamHandler(sys.stdout)
-# ch.setLevel(logging.DEBUG)
-# formatter = logging.Formatter(
-#             '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-# ch.setFormatter(formatter)
-# root.addHandler(ch)
+
+def test_client_driven_id():
+    """ validate server uses client's id """
+    Checksum = models.get_model('ga4ghChecksum')
+    URL = models.get_model('ga4ghURL')
+    CreateDataObjectRequest = models.get_model('ga4ghCreateDataObjectRequest')
+    DataObject = models.get_model('ga4ghCreateDataObjectRequest')
+    checksum = str(uuid.uuid1())
+    id = str(uuid.uuid1())
+    # CreateDataObject
+    print("..........Create an object............")
+    create_data_object = DataObject(
+        id=id,
+        name="abc",
+        size=12345,
+        checksums=[Checksum(checksum=checksum, type="md5")],
+        urls=[URL(url="a"), URL(url="b")])
+    create_request = CreateDataObjectRequest(data_object=create_data_object)
+    create_response = client.CreateDataObject(body=create_request).result()
+    data_object_id = create_response['data_object_id']
+    assert data_object_id == id,  "expected server to use client's id"
+
+
 
 
 def test_duplicate_checksums():

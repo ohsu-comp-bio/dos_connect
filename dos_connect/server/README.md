@@ -16,7 +16,7 @@ We use s3_inventory for these examples, other apps work the same.
 
 ### server
 ```
-$ python -m dos_connect.server.server
+$ python -m dos_connect.server.app
 using authorizer dos_connect.server.noop_authorizer to change set AUTHORIZER envvar
 using backend dos_connect.server.memory_backend to change set BACKEND envvar
  * Running on http://0.0.0.0:8080/ (Press CTRL+C to quit)
@@ -42,9 +42,9 @@ AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID  \
 ```
 # source openstack's rc file first
 sudo \
-  OS_TOKEN=XXXXX OS_AUTH_URL=http://xxxxx:pppp/v3 \
+  OS_AUTH_URL=http://xxxxx:pppp/v3 \
   AUTHORIZER=dos_connect.server.keystone_api_key_authorizer \
-  python -dos_connect.server.server \
+  python -m dos_connect.server.app \
     -K $(pwd)/certs/certificate.key \
     -C $(pwd)/certs/certificate.pem  \
     -P 443
@@ -74,7 +74,7 @@ DOS_API_KEY=XXXX \
 # user.htpasswd needs to exist in default dir
 sudo \  
   AUTHORIZER=dos_connect.server.basic_authorizer \
-  python -dos_connect.server.server \
+  python -dos_connect.server.app \
     -K $(pwd)/certs/certificate.key \
     -C $(pwd)/certs/certificate.pem  \
     -P 443
@@ -106,7 +106,7 @@ sudo \
 # user.htpasswd needs to exist in default dir
 sudo \  
   BACKEND=dos_connect.server.elasticsearch_backend  ES_REFRESH_ON_PERSIST=true \
-  python -dos_connect.server.server \
+  python -dos_connect.server.app \
     -K $(pwd)/certs/certificate.key \
     -C $(pwd)/certs/certificate.pem  \
     -P 443

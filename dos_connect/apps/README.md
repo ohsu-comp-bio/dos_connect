@@ -14,7 +14,7 @@ Note: the following examples...
 
 ### gdc ( genomic data commons)
 ```
-python -m dos_connect.apps.inventory.gdc_inventory --webserver http://localhost:8080
+python -m dos_connect.apps.inventory.gdc_inventory --dos_server http://localhost:8080
 ```
 
 ### azure inventory
@@ -58,8 +58,11 @@ Long lived commands to capture native event messages from the object store.
 
 ### azure observer
 ```
-# queue needs to exist
-# see https://docs.aws.amazon.com/AmazonS3/latest/dev/NotificationHowTo.html
+BLOB_STORAGE_ACCOUNT=$BLOB_STORAGE_ACCOUNT \
+ BLOB_STORAGE_ACCESS_KEY=$BLOB_STORAGE_ACCESS_KEY \
+   python -m dos_connect.apps.observers.azure_observer \
+   --azure_queue $AZURE_QUEUE
+
 AWS_ACCESS_KEY_ID=XXXXXX \
 AWS_SECRET_ACCESS_KEY=XXXXXX \
 AWS_DEFAULT_REGION=XXXX \
@@ -92,8 +95,23 @@ python -m dos_connect.apps.observers.pubsub_observer   \
  --google_subscription_name $GOOGLE_SUBSCRIPTION_NAME
 ```
 
+
 ### file observer
 ```
 # note that the inventory function uses the same module as the observer
 python -m dos_connect.apps.observers.file_observer $MONITOR_DIRECTORY
+```
+
+## plug in customizations
+
+All observers and inventory tasks leverage a middleware plugin capability.
+* user_metadata(): customize the collection of metadata
+* before_store(): modify the data_object before persisting
+* md5sum(): calculate the md5 of the file
+
+To specify your own customizer, set the `CUSTOMIZER` environmental variable.
+It in turn can specify it's own configuration variables, in this case `AWS_MD5_URL`
+
+```
+CUSTOMIZER=dos_connect.apps.aws_customizer AWS_MD5_URL=https://4n5huh8mw0.execute-api.us-west-2.amazonaws.com/api
 ```

@@ -43,14 +43,13 @@ def to_dos(record):
     }
     eventTime = datetime.strptime(record['eventTime'], "%Y-%m-%dT%H:%M:%S.%fZ")
     data_object = {
-      "id": _id,
       "file_size": obj.get('size', None),
       # The time, in ISO-8601,when S3 finished processing the request,
-      "created": eventTime,
-      "updated": eventTime,
+      "created": eventTime.isoformat(),
+      "updated": eventTime.isoformat(),
       # TODO multipart ...
       # https://forums.aws.amazon.com/thread.jspa?messageID=203436&#203436
-      "checksums": [{'checksum': md5sum(key=obj['key']
+      "checksums": [{'checksum': md5sum(key=obj['key'],
                                         bucket_name=system_metadata['bucket_name'],
                                         etag=obj.get('eTag', None)),
                      'type': 'md5'}],

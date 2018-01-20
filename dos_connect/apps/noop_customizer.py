@@ -15,3 +15,8 @@ def md5sum(**kwargs):
     """ noop return md5 """
     etag = kwargs.get('etag', None)
     return etag
+
+
+def id(**kwargs):
+    """ noop return None, server sets id """
+    return None

@@ -11,9 +11,6 @@ import requests
 from decorator import decorator
 
 log = logging.getLogger(__name__)
-
-
-assert os.getenv('OS_TOKEN', None), 'Please export openstack OS_TOKEN'
 assert os.getenv('OS_AUTH_URL', None), 'Please export openstack OS_AUTH_URL'
 
 
@@ -21,10 +18,10 @@ assert os.getenv('OS_AUTH_URL', None), 'Please export openstack OS_AUTH_URL'
 
 def _check_auth(token):
     '''This function is called to check if a token is valid.'''
-    # log.info('check_auth {} {}'.format(username, password))
-    # TODO
+    # log.info('check_auth {}'.format(token))
+    # validate the token
     url = '{}/auth/tokens'.format(os.environ.get('OS_AUTH_URL'))
-    headers = {'X-Auth-Token': os.environ.get('OS_TOKEN'),
+    headers = {'X-Auth-Token': token,
                'X-Subject-Token': token}
     token_info = requests.get(url, headers=headers).json()
     if 'token' not in token_info:

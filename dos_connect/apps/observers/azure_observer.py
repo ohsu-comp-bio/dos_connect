@@ -70,9 +70,8 @@ def to_dos(message_json, blob=None):
             val = getattr(blob.properties, field, None)
             if val:
                 system_metadata[field] = val
-        last_modified = blob.properties.last_modified
+        last_modified = blob.properties.last_modified.isoformat()
         data_object = {
-          "id": _id,
           "file_size": blob.properties.content_length,
           "created": last_modified,
           "updated": last_modified,

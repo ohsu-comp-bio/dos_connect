@@ -66,7 +66,7 @@ pip install -r requirements.txt --process-dependency-links -I
 
   source the .env file
   ```
-  $ export  $(cat ~/kafka-connect/.env | grep -v "#" | xargs )
+  export  $(cat .env | grep -v "#" | xargs )
   ```
 
   initialize the services

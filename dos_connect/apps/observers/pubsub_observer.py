@@ -51,10 +51,9 @@ def to_dos(message):
               'user_metadata': user_metadata
               }]
     return {
-      "id": _id,
       "file_size": int(record['size']),
-      "created": datetime.strptime(record['timeCreated'], "%Y-%m-%dT%H:%M:%S.%fZ"),
-      "updated": datetime.strptime(record['updated'], "%Y-%m-%dT%H:%M:%S.%fZ"),
+      "created": record['timeCreated'],
+      "updated": record['updated'],
       # TODO multipart ...
       # https://cloud.google.com/storage/docs/hashes-etags#_MD5
       "checksums": [{"checksum": record['md5Hash'], 'type': 'md5'}],

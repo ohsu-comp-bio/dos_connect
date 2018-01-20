@@ -35,6 +35,7 @@ def save(doc, index='data_objects'):
         store[index] = []
     doc.meta = AttributeDict({'id': doc.id})
     store[index].append(doc)
+    log.info(doc.id)
     return doc
 
 

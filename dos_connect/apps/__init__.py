@@ -20,12 +20,12 @@ from importlib import import_module
 _CLIENT = None
 
 # import our plugin
-# from file_observer_customizations import md5sum, user_metadata, before_store
 customizer_name = os.getenv('CUSTOMIZER', 'dos_connect.apps.noop_customizer')
 customizer = import_module(customizer_name)
 _md5sum = getattr(customizer, 'md5sum')
 _user_metadata = getattr(customizer, 'user_metadata')
 _before_store = getattr(customizer, 'before_store')
+_id = getattr(customizer, 'id')
 
 
 def common_args(argparser):
@@ -64,7 +64,7 @@ def common_logging(args):
     if args.verbose:
         logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
     else:
-        logging.basicConfig(stream=sys.stdout, level=logging.WARNING)
+        logging.basicConfig(stream=sys.stdout, level=logging.INFO)
     # https://github.com/shazow/urllib3/issues/523
     requests.packages.urllib3.disable_warnings()
 
@@ -114,24 +114,43 @@ def md5sum(**kwargs):
     return _md5sum(**kwargs)
 
 
+def id(**kwargs):
+    """ call plugin """
+    return _id(**kwargs)
+
+
 def store(args, payload):
     """ convienince method write dict to server """
-    before_store(args=args, data_object=payload)
+    before_store(args=args, data_object_dict=payload)
     logger = logging.getLogger(__name__)
-    key = '{}~{}'.format(payload['urls'][0]['system_metadata']['event_type'],
+    event_type = payload['urls'][0]['system_metadata']['event_type']
+    key = '{}~{}'.format(event_type,
                          payload['urls'][0]['url'])
+
+    object_action = event_type.split(':')[0]
+    # 'Microsoft.Storage.BlobDeleted': 'ObjectRemoved:Delete',
+    # 'OBJECT_ARCHIVE': 'ObjectCreated:Copy',
+    # 'Microsoft.Storage.BlobCreated': 'ObjectCreated:Put',
+    # 'OBJECT_METADATA_UPDATE': 'ObjectModified'
+
     if not args.dry_run:
         local_client = client_factory(args)
         models = local_client.models
         client = local_client.client
-        Checksum = models.get_model('ga4ghChecksum')
-        URL = models.get_model('ga4ghURL')
         CreateDataObjectRequest = models.get_model(
                                     'ga4ghCreateDataObjectRequest')
-        DataObject = models.get_model('ga4ghCreateDataObjectRequest')
-        create_data_object = DataObject().unmarshal(payload)
-        create_request = CreateDataObjectRequest(
-                            data_object=create_data_object)
+        DataObject = models.get_model('ga4ghDataObject')
+        data_object = DataObject().unmarshal(payload)
+        create_request = CreateDataObjectRequest(data_object=data_object)
+        data_object = create_request.data_object
+        # call plugin
+        constructed_id = id(data_object=data_object)
+        if constructed_id:
+            data_object.id = constructed_id
+            logger.info('set id to {}'.format(data_object.id))
+        else:
+            logger.info('data_object id was {}'.format(data_object.id))
+        create_request = CreateDataObjectRequest(data_object=data_object)
         create_response = client.CreateDataObject(body=create_request).result()
         data_object_id = create_response['data_object_id']
         logger.info('sent to dos_server: {} {}'.format(key, data_object_id))

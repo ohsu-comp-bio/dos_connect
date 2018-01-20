@@ -30,11 +30,9 @@ def to_dos(bucket, record):
             "user_metadata": user_metadata
         }]
     return {
-      "id": _id,
       "file_size": int(record['size']),
-      "created": datetime.strptime(record['timeCreated'], "%Y-%m-%dT%H:%M:%S.%fZ"),
-      "updated": datetime.strptime(record['updated'], "%Y-%m-%dT%H:%M:%S.%fZ"),
-      # TODO multipart ...
+      "created": record['timeCreated'],  # datetime.strptime(record['timeCreated'], "%Y-%m-%dT%H:%M:%S.%fZ"),
+      "updated": record['updated'],  # datetime.strptime(record['updated'], "%Y-%m-%dT%H:%M:%S.%fZ"),
       "checksums": [{"checksum": record['md5Hash'], 'type': 'md5'}],
       "urls": _urls
     }
