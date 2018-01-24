@@ -19,4 +19,4 @@ pip install -r requirements.txt --process-dependency-links -I
 ```
 
 ### setup
-see [here](dos_connect/dos_connect/server/README.md)
+see [here](dos_connect/server/README.md)
