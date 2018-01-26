@@ -1,4 +1,3 @@
-from kafka import KafkaProducer
 from google.cloud import pubsub
 from google.cloud import storage
 
@@ -7,10 +6,11 @@ import argparse
 import logging
 import urllib
 import time
+from datetime import datetime
 import pprint
-from customizations import store, custom_args
 import sys
-from .. import common_args, common_logging
+from .. import common_args, common_logging,  store, custom_args
+
 
 # Instantiates a client
 STORAGE_CLIENT = None
@@ -51,7 +51,6 @@ def to_dos(message):
               'user_metadata': user_metadata
               }]
     return {
-      "id": _id,
       "file_size": int(record['size']),
       "created": record['timeCreated'],
       "updated": record['updated'],
@@ -103,8 +102,6 @@ def process(args, message):
         if bucketId not in buckets:
             buckets[bucketId] = _client().get_bucket(bucketId)
         data_object['urls'][0]['system_metadata']['location'] = buckets[bucketId].location
-
-        logger.debug(json.dumps(data_object))
         store(args, data_object)
         return True
 
@@ -113,24 +110,12 @@ def consume(args):
     # Get the service resources
 
     subscriber = pubsub.SubscriberClient()
-    # TODO - figure out how to dynamically create subscriptions
-    # topic_name = 'projects/{project_id}/topics/{topic}'.format(
-    #     project_id=args.google_cloud_project,
-    #     topic=args.google_topic,
-    # )
-    # sub_name = 'projects/{project_id}/subscriptions/{sub}'.format(
-    #     project_id=args.google_cloud_project,
-    #     sub=args.google_subscription_name,
-    # )
-    # logger.debug(topic_name)
-    # logger.debug(sub_name)
-    # subscription = subscriber.create_subscription(topic_name, sub_name)
+
+    topic_path = subscriber.topic_path(args.google_cloud_project,
+                                       args.google_topic)
 
     subscription_path = subscriber.subscription_path(
         args.google_cloud_project, args.google_subscription_name)
-
-    # sub_name = 'projects/elite-impact-184313/topics/dos-testing'
-    # subscription = subscriber.subscribe(sub_name)
 
     def callback(message):
         try:
@@ -142,13 +127,13 @@ def consume(args):
         except Exception as e:
             logger.exception(e)
 
-    subscriber.subscribe(subscription_path, callback=callback)
-
-    # subscription.open(callback)
+    # subscription needs to exist. see
+    # https://cloud.google.com/pubsub/docs/admin#create_a_pull_subscription
+    subscription = subscriber.subscribe(subscription_path, callback=callback)
 
     # The subscriber is non-blocking, so we must keep the main thread from
     # exiting to allow it to process messages in the background.
-    logger.debug('Listening for messages on {}'.format(subscription_path))
+    logger.info('Listening for messages on {}'.format(subscription_path))
     while True:
         time.sleep(60)
 
@@ -157,16 +142,13 @@ def populate_args(argparser):
     """add arguments we expect """
 
     argparser.add_argument('--google_cloud_project', '-kp',
-                           help='project id',
-                           default='elite-impact-184313')
+                           help='project id', required=True)
 
     argparser.add_argument('--google_topic', '-gt',
-                           help='pubsub queue name',
-                           default='dos-testing')
+                           help='pubsub queue name', required=True)
 
     argparser.add_argument('--google_subscription_name', '-gs',
-                           help='pubsub subscription name',
-                           default='dos-testing')
+                           help='pubsub subscription name', required=True)
 
     common_args(argparser)
     custom_args(argparser)
@@ -174,7 +156,7 @@ def populate_args(argparser):
 
 if __name__ == '__main__':  # pragma: no cover
     argparser = argparse.ArgumentParser(
-        description='Consume events from aws s3, populate kafka')
+        description='Consume events from aws s3, populate server')
     populate_args(argparser)
     args = argparser.parse_args()
     common_logging(args)

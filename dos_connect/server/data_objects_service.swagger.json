@@ -14,11 +14,14 @@
   "produces": [
     "application/json"
   ],
+  "security": [
+    {"APIKeyHeader": []}
+  ],
   "paths": {
     "/ga4gh/dos/v1/databundles": {
       "post": {
         "summary": "Create a new Data Bundle",
-        "x-swagger-router-controller": "app",
+        "x-swagger-router-controller": "ga4gh.dos.server",
         "operationId": "CreateDataBundle",
         "responses": {
           "200": {
@@ -46,7 +49,7 @@
     "/ga4gh/dos/v1/databundles/list": {
       "post": {
         "summary": "List the Data Bundles",
-        "x-swagger-router-controller": "app",
+        "x-swagger-router-controller": "ga4gh.dos.server",
         "operationId": "ListDataBundles",
         "responses": {
           "200": {
@@ -72,9 +75,40 @@
       }
     },
     "/ga4gh/dos/v1/databundles/{data_bundle_id}": {
+      "get": {
+        "summary": "Retrieve a Data Bundle",
+        "x-swagger-router-controller": "ga4gh.dos.server",
+        "operationId": "GetDataBundle",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/ga4ghGetDataBundleResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "data_bundle_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "version",
+            "description": "OPTIONAL\nIf provided will return the requested version of the selected Data Bundle.\nOtherwise, only the latest version is returned.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "DataObjectService"
+        ]
+      },
       "delete": {
         "summary": "Delete a Data Bundle",
-        "x-swagger-router-controller": "app",
+        "x-swagger-router-controller": "ga4gh.dos.server",
         "operationId": "DeleteDataBundle",
         "responses": {
           "200": {
@@ -98,7 +132,7 @@
       },
       "put": {
         "summary": "Update a Data Bundle",
-        "x-swagger-router-controller": "app",
+        "x-swagger-router-controller": "ga4gh.dos.server",
         "operationId": "UpdateDataBundle",
         "responses": {
           "200": {
@@ -129,10 +163,35 @@
         ]
       }
     },
+    "/ga4gh/dos/v1/databundles/{data_bundle_id}/versions": {
+      "get": {
+        "x-swagger-router-controller": "ga4gh.dos.server",
+        "operationId": "GetDataBundleVersions",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/ga4ghGetDataBundleVersionsResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "data_bundle_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "DataObjectService"
+        ]
+      }
+    },
     "/ga4gh/dos/v1/dataobjects": {
       "post": {
         "summary": "Make a new Data Object",
-        "x-swagger-router-controller": "app",
+        "x-swagger-router-controller": "ga4gh.dos.server",
         "operationId": "CreateDataObject",
         "responses": {
           "200": {
@@ -160,7 +219,7 @@
     "/ga4gh/dos/v1/dataobjects/list": {
       "post": {
         "summary": "List the Data Objects",
-        "x-swagger-router-controller": "app",
+        "x-swagger-router-controller": "ga4gh.dos.server",
         "operationId": "ListDataObjects",
         "responses": {
           "200": {
@@ -188,7 +247,7 @@
     "/ga4gh/dos/v1/dataobjects/{data_object_id}": {
       "get": {
         "summary": "Retrieve a Data Object",
-        "x-swagger-router-controller": "app",
+        "x-swagger-router-controller": "ga4gh.dos.server",
         "operationId": "GetDataObject",
         "responses": {
           "200": {
@@ -219,7 +278,7 @@
       },
       "delete": {
         "summary": "Delete a Data Object index entry",
-        "x-swagger-router-controller": "app",
+        "x-swagger-router-controller": "ga4gh.dos.server",
         "operationId": "DeleteDataObject",
         "responses": {
           "200": {
@@ -243,7 +302,7 @@
       },
       "put": {
         "summary": "Update a Data Object",
-        "x-swagger-router-controller": "app",
+        "x-swagger-router-controller": "ga4gh.dos.server",
         "operationId": "UpdateDataObject",
         "responses": {
           "200": {
@@ -276,7 +335,7 @@
     },
     "/ga4gh/dos/v1/dataobjects/{data_object_id}/versions": {
       "get": {
-        "x-swagger-router-controller": "app",
+        "x-swagger-router-controller": "ga4gh.dos.server",
         "operationId": "GetDataObjectVersions",
         "responses": {
           "200": {
@@ -370,10 +429,10 @@
           "type": "string",
           "title": "REQUIRED\nAn identifier, unique to this Data Bundle"
         },
-        "data_objects": {
+        "data_object_ids": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/ga4ghDataObject"
+            "type": "string"
           },
           "description": "REQUIRED\nThe list of Data Objects that this Data Bundle contains."
         },
@@ -507,6 +566,18 @@
         }
       }
     },
+    "ga4ghGetDataBundleVersionsResponse": {
+      "type": "object",
+      "properties": {
+        "data_bundles": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ga4ghDataBundle"
+          },
+          "description": "REQUIRED\nAll versions of the Data Bundles that match the GetDataBundleVersions\nrequest."
+        }
+      }
+    },
     "ga4ghGetDataObjectResponse": {
       "type": "object",
       "properties": {
@@ -554,7 +625,7 @@
     "ga4ghListDataBundlesResponse": {
       "type": "object",
       "properties": {
-        "data_bundle_objects": {
+        "data_bundles": {
           "type": "array",
           "items": {
             "$ref": "#/definitions/ga4ghDataBundle"
@@ -633,40 +704,11 @@
       "properties": {
         "data_bundle_id": {
           "type": "string",
-          "description": "REQUIRED\nThe identifier of the Data Bundle to be updated."
+          "title": "REQUIRED"
         },
-        "data_object_ids": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "REQUIRED\nThe list of Data Object identifiers that this Data Bundle contains."
-        },
-        "checksums": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/ga4ghChecksum"
-          },
-          "description": "REQUIRED\nAt least one checksum must be provided.\nThe data bundle SHA256 checksum is computed over all the\nSHA256 checksums of the Data Objects that make up this bundle."
-        },
-        "description": {
-          "type": "string",
-          "description": "OPTIONAL\nA human readable description."
-        },
-        "aliases": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "OPTIONAL\nA list of strings that can be used to identify this Data Bundle."
-        },
-        "system_metadata": {
-          "$ref": "#/definitions/protobufStruct",
-          "description": "OPTIONAL\nA set of key-value pairs that represent system metadata about the Bundle."
-        },
-        "user_metadata": {
-          "$ref": "#/definitions/protobufStruct",
-          "description": "OPTIONAL\nA set of key-value pairs that represent metadata provided by the uploader."
+        "data_bundle": {
+          "$ref": "#/definitions/ga4ghDataBundle",
+          "description": "REQUIRED\nThe new Data Bundle content."
         }
       }
     },
@@ -682,13 +724,16 @@
     "ga4ghUpdateDataObjectRequest": {
       "type": "object",
       "properties": {
+        "data_object_id": {
+          "type": "string",
+          "description": "REQUIRED\nThe identifier of the Data Object to be updated."
+        },
         "data_object": {
           "$ref": "#/definitions/ga4ghDataObject",
-          "description": "REQUIRED\nThe data object to be created. The ID scheme is left up to the\nimplementor but should be unique to the server instance."
+          "description": "REQUIRED\nThe new Data Object for this identifier."
         }
-      },
-      "description": "The Data Object one would like to index. One must provide any aliases\nand URLs to this file when sending the CreateDataObjectRequest. It is up\nto implementations to validate that the Data Object is available from\nthe provided URLs."
-    },      
+      }
+    },
     "ga4ghUpdateDataObjectResponse": {
       "type": "object",
       "properties": {
@@ -763,6 +808,21 @@
         }
       },
       "description": "`Value` represents a dynamically typed value which can be either\nnull, a number, a string, a boolean, a recursive struct value, or a\nlist of values. A producer of value is expected to set one of that\nvariants, absence of any variant indicates an error.\n\nThe JSON representation for `Value` is JSON value."
+    }
+  },
+  "securityDefinitions": {
+    "basicAuth": {
+      "type": "basic"
+    },
+    "APIKeyHeader": {
+      "type": "apiKey",
+      "in": "header",
+      "name": "X-API-Key"
+    },
+    "APIKeyQueryParam": {
+      "type": "apiKey",
+      "in": "query",
+      "name": "api_key"
     }
   }
 }

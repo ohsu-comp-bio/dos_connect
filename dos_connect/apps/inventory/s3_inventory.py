@@ -8,8 +8,7 @@ import argparse
 import urllib
 from botocore.client import Config
 from urlparse import urlparse
-from customizations import store, custom_args
-from .. import common_args, common_logging
+from .. import common_args, common_logging,  store, custom_args, md5sum
 
 logger = logging.getLogger('s3_inventory')
 
@@ -51,13 +50,13 @@ def to_dos(endpoint_url, region, bucket_name, record, metadata):
         if etag.startswith('%22') and etag.endswith('%22'):
             etag = etag[3:-3]
         return {
-          "id": _id,
           "file_size": record['Size'],
           # The time, in ISO-8601,when S3 finished processing the request,
           "created":  record['LastModified'].isoformat(),
           "updated":  record['LastModified'].isoformat(),
           # TODO multipart ...
-          "checksums": [{'checksum': etag, 'type': 'md5'}],
+          "checksums": [{'checksum': md5sum(etag=etag,
+                         bucket_name=bucket_name, key=_id), 'type': 'md5'}],
           "urls": [_url]
         }
 
@@ -100,10 +99,6 @@ if __name__ == "__main__":
     args = argparser.parse_args()
 
     common_logging(args)
-
-    logger = logging.getLogger(__name__)
-
-    logger.debug(args)
     event_handler = DOSHandler(args)
 
     # support non aws hosts
@@ -122,6 +117,7 @@ if __name__ == "__main__":
     page_iterator = paginator.paginate(Bucket=args.bucket_name)
     for page in page_iterator:
         logger.debug(page)
+
         region = None
         if 'x-amz-bucket-region' in page['ResponseMetadata']['HTTPHeaders']:
             region = page['ResponseMetadata']['HTTPHeaders']['x-amz-bucket-region']

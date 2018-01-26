@@ -1,10 +1,10 @@
 # With app.py running start this demo
-from ..client import dos_client
-from .. import common_args, common_logging
+from .. import common_args, common_logging,  client_factory, custom_args
 import requests
 import json
 import sys
 import argparse
+from ga4gh.dos.client import Client
 
 
 GDC_URL = 'https://api.gdc.cancer.gov'
@@ -90,7 +90,6 @@ def gdc_to_ga4gh(gdc):
     URL = models.get_model('ga4ghURL')
     Checksum = models.get_model('ga4ghChecksum')
     return DataObject(
-        id=gdc.get('md5sum'),
         checksums=[Checksum(checksum=gdc.get('md5sum'), type='md5')],
         file_name=gdc.get('file_name'),
         file_size=str(gdc.get('file_size')),
@@ -193,11 +192,10 @@ def load_gdc():
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser(
         description='Scrape GDC, populate webserver')
-    argparser.add_argument('--webserver_url',
-                           help='url of webserver',
-                           default='{}:{}'.format('localhost', '5555'))
     common_args(argparser)
+    custom_args(argparser)
     args = argparser.parse_args()
-    models = dos_client.initialize(args)
-    client = models.DataObjectService
+    local_client = client_factory(args)
+    client = local_client.client
+    models = local_client.models
     load_gdc()

@@ -117,3 +117,8 @@ ENV/
 
 # mypy
 .mypy_cache/
+
+# certs
+certs/
+*.htpasswd
+.chalice

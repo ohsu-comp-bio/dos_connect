@@ -1,10 +1,7 @@
-from kafka import KafkaProducer
 import os
 import hashlib
 import re
 import logging
-from customizations import store, custom_args
-from .. import common_args, common_logging
 
 """ """
 all_checksums = {}
@@ -37,12 +34,16 @@ def _hash_metadata(metadata):
     return metadata
 
 
-def user_metadata(full_path):
+def user_metadata(**kwargs):
+    event = kwargs.get('event')
+    full_path = event.src_path
     return _hash_metadata(_metadata(full_path))
 
 
-def before_store(args, data_object):
+def before_store(**kwargs):
+    """ obsure sensitive data, fetch metadata"""
     logger = logging.getLogger(__name__)
+    data_object = kwargs.get('data_object_dict')
     url = data_object['urls'][0]['url']
     id = data_object['id']
     clear = _metadata(url)
@@ -57,10 +58,14 @@ def before_store(args, data_object):
     return data_object
 
 
-def md5sum(full_path, url, blocksize=65536, md5filename='md5sum.txt'):
+def md5sum(**kwargs):
     """ lookup md5 in local file, or compute it on the fly
         url is provided to lookup from cache
     """
+    full_path = kwargs.get('full_path')
+    url = kwargs.get('full_path')
+    blocksize = kwargs.get('blocksize', 65536)
+    md5filename = kwargs.get('md5filename', 'md5sum.txt')
     logger = logging.getLogger(__name__)
     # since md5filename only found in `real` directory, use that
     orig_path = full_path

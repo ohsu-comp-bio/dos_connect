@@ -33,107 +33,12 @@ For development and proof of concept, a docker-compose setup is provided.
 
 
 
+### install
+
+```
+pip install -r requirements.txt --process-dependency-links -I
+```
+
 ### setup
+see [here](dos_connect/server/README.md)
 
-  Bucket setup (for observers, not required for inventory)
-  * [azure](https://docs.microsoft.com/en-us/azure/storage/blobs/storage-blob-event-overview)
-  * [google](https://cloud.google.com/storage/docs/pubsub-notifications)
-  * [aws](http://docs.aws.amazon.com/AmazonS3/latest/dev/NotificationHowTo.html)
-  * [swift](https://github.com/redhat-cip/swift-middleware-sample)
-
-
-  create .env file in the cloned repo
-  ```
-  # common
-  ZOOKEEPER_CLIENT_PORT=2182
-  KAFKA_ZOOKEEPER_CONNECT=XX.XX.XX.XX:2182
-  KAFKA_BOOTSTRAP_SERVERS=XX.XX.XX.XX:9092
-  KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://XX.XX.XX.XX:9092
-  KAFKA_REST_ZOOKEEPER_CONNECT=localhost:2182
-  KAFKA_REST_LISTENERS=http://localhost:8082
-  KAFKA_REST_HOST_NAME=localhost
-  KAFKA_DOS_TOPIC=dos-topic
-
-  # utility
-  KAFKA_TOPIC_UI_PORT=8000
-  ELASTIC_URL=localhost:9200
-
-  # file system
-  MONITOR_DIRECTORY=/files
-
-  # swift
-  SWIFT_ACCESS_KEY_ID=XXX
-  SWIFT_SECRET_ACCESS_KEY=XXX
-  SWIFT_PORT=8080
-  SWIFT_TEST_BUCKET=etl-development
-
-  # google
-  PUBSUB_QUEUE_NAME=dos-testing
-  GS_TEST_BUCKET=dos-testing
-
-  # aws
-  AWS_TEST_BUCKET=dos-testing
-  SQS_QUEUE_NAME=dos-testing
-  AWS_ACCESS_KEY_ID=XXX
-  AWS_SECRET_ACCESS_KEY=XXX
-  AWS_DEFAULT_REGION=us-west-2
-
-  # azure
-  QUEUE_STORAGE_ACCOUNT=dostestingq
-  QUEUE_STORAGE_ACCESS_KEY=XXX
-  BLOB_STORAGE_ACCOUNT=dostesting
-  BLOB_STORAGE_ACCESS_KEY=XXX
-  AZURE_TEST_BUCKET=dos-testing
-  AZURE_QUEUE=dos-testing
-  ```
-
-  source the .env file
-  ```
-  $ export  $(cat ~/kafka-connect/.env | grep -v "#" | xargs )
-  ```
-
-  initialize the services
-  ```
-  $bin/init
-  ```
-  * For more, Read [Kafka Single Node](https://github.com/Landoop/fast-data-dev )
-
-### testing
-  * unit tests
-  ```
-  $pytest
-  ```
-
-  * send ad-hoc test messages
-  ```
-  $util/aws-inventory
-  $util/aws-observer
-  $util/file-inventory
-  $util/file-observer
-  $util/swift-inventory
-  $util/swift-observer
-  $util/azure-observer
-  $util/azure-inventory
-  ```
-  * visit hostname:$KAFKA_TOPIC_UI_PORT to see the results
-  ![image](https://user-images.githubusercontent.com/47808/32018643-62b37840-b97f-11e7-9203-0e1c7f41a0be.png)
-
-  * see results in elastic
-  ![image](https://user-images.githubusercontent.com/47808/32027500-3787c350-b99e-11e7-8da2-77e38509af33.png)
-
-
-
-### clean
-  to re-initialize the services
-  ```
-  $bin/clean
-  ```
-
-### customize
-  All Kafka code can be overwritten
-  * dos_connect/observers/customizations.py
-  * dos_connect/inventory/customizations.py  
-
-### todo
-  * refactor to move kafka & elastic behind standard webserver
-  ![image](https://user-images.githubusercontent.com/47808/32866456-cc4d7438-ca1c-11e7-888a-799f2e630691.png)

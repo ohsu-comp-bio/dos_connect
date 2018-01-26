@@ -6,6 +6,7 @@ from watchdog.events import PatternMatchingEventHandler, FileCreatedEvent
 from watchdog.events import DirCreatedEvent
 from watchdog.observers.polling import PollingObserver
 import datetime
+import arrow
 import urlparse
 import urllib
 import socket
@@ -15,9 +16,7 @@ import argparse
 from stat import *
 import json
 import re
-from file_observer_customizations import md5sum, user_metadata, before_store
-from customizations import store, custom_args
-from .. import common_args, common_logging
+from .. import common_args, common_logging,  store, custom_args, md5sum, before_store, user_metadata  # noqa
 
 
 class DOSHandler(PatternMatchingEventHandler):
@@ -60,21 +59,24 @@ class DOSHandler(PatternMatchingEventHandler):
 
         if not event.event_type == 'deleted':
             f = os.stat(event.src_path)
+            # is this a regular file?
             if not S_ISREG(f.st_mode):
                 return
-            ctime = datetime.datetime.fromtimestamp(f.st_ctime).isoformat()
-            mtime = datetime.datetime.fromtimestamp(f.st_mtime).isoformat()
+
+            ctime = arrow.get(f.st_ctime)
+            mtime = arrow.get(f.st_mtime)
             data_object = {
               "id": _id,
               "size": f.st_size,
               # The time, in ISO-8601,when S3 finished processing the request,
               "created":  ctime,
               "updated":  mtime,
-              "checksums": [{"checksum": md5sum(event.src_path, _url),
+              "checksums": [{"checksum": md5sum(src_path=event.src_path,
+                                                url=_url),
                              'type': 'md5'}],
               "urls": [{
                   'url': _url,
-                  "user_metadata": user_metadata(event.src_path),
+                  "user_metadata": user_metadata(event=event),
                   "system_metadata": {"event_type":
                                       event_methods.get(event.event_type),
                                       "bucket_name": self.monitor_directory}}]
@@ -85,7 +87,9 @@ class DOSHandler(PatternMatchingEventHandler):
         if (event.is_directory):
             return
         data_object = self.to_dos(event)
-        before_store(args, data_object)
+        # not a regular file
+        if not data_object:
+            return
         store(args, data_object)
 
     def path2url(self, path):
@@ -126,7 +130,8 @@ if __name__ == "__main__":
     argparser.add_argument('--polling_interval', '-pi',
                            help='interval in seconds between polling '
                                 'the file system',
-                           default=60)
+                           default=60,
+                           type=int)
 
     argparser.add_argument('monitor_directory',
                            help='''directory to monitor''',
