@@ -2,44 +2,21 @@
 version: '2'
 services:
 
-  # core service
-  kafka:
-    build:
-      context: services/fast-data-dev
-    network_mode: host
-    volumes:
-      # https://github.com/Landoop/fast-data-dev/issues/37
-      - "./volumes/kafka:/tmp"
-    environment:
-      ADV_HOST: ${ADV_HOST}
-      ENABLE_SSL: ${ENABLE_SSL}
-      WEB_PORT: ${WEB_PORT}
-      # CONNECT_PORT: ${CONNECT_PORT}
-      REGISTRY_PORT: ${REGISTRY_PORT}
-      USER: ${KAFKA_UI_USER}
-      PASSWORD: ${KAFKA_UI_PASSWORD}
-      BROKER_SSL_PORT: ${BROKER_SSL_PORT}
 
-
-  swift:
+  webserver:
     build:
-      context: services/swift
-    ports:
-      # coordinate with services/swift/files/proxy-server.conf
-      - "${SWIFT_PORT}:${SWIFT_PORT}"
-    network_mode: host
+      context: .
+      dockerfile: services/webserver/Dockerfile
     volumes:
-      # For testing from host
-      - "./volumes/files:/files"
       # client side certs and keys
       - "./volumes/client-certs:/client-certs"
     environment:
-      # TODO do env subsitute
-      # coordinate with services/swift/files/proxy-server.conf
-      # See https://docs.docker.com/samples/library/nginx/#using-environment-variables-in-nginx-configuration
-      - http.host=0.0.0.0
+      - ELASTIC_URL=${ELASTIC_URL}
       - KAFKA_TOPIC=${KAFKA_DOS_TOPIC}
       - KAFKA_BOOTSTRAP=${KAFKA_BOOTSTRAP_SERVERS}
+      - BACKEND=dos_connect.server.elasticsearch_backend
+      - DOS_CONNECT_WEBSERVER_PORT=${DOS_CONNECT_WEBSERVER_PORT}
+
 
   # user service: monitor aws SQS queue
   aws-observer:
@@ -47,7 +24,7 @@ services:
       context: .
       dockerfile: services/aws-observer/Dockerfile
     depends_on:
-      - kafka
+      - webserver
     volumes:
       # client side certs and keys
       - "./volumes/client-certs:/client-certs"
@@ -70,11 +47,8 @@ services:
       # client side certs and keys
       - "./volumes/client-certs:/client-certs"
     depends_on:
-      - kafka
-    network_mode: host
+      - webserver
     environment:
-      - KAFKA_TOPIC=${KAFKA_DOS_TOPIC}
-      - KAFKA_BOOTSTRAP=${KAFKA_BOOTSTRAP_SERVERS}
       - PUBSUB_QUEUE_NAME=${PUBSUB_QUEUE_NAME}
 
 
@@ -87,11 +61,8 @@ services:
       # client side certs and keys
       - "./volumes/client-certs:/client-certs"
     depends_on:
-      - kafka
-    network_mode: host
+      - webserver
     environment:
-      - KAFKA_TOPIC=${KAFKA_DOS_TOPIC}
-      - KAFKA_BOOTSTRAP=${KAFKA_BOOTSTRAP_SERVERS}
       - QUEUE_STORAGE_ACCOUNT=${QUEUE_STORAGE_ACCOUNT}
       - QUEUE_STORAGE_ACCESS_KEY=${QUEUE_STORAGE_ACCESS_KEY}
       - BLOB_STORAGE_ACCOUNT=${BLOB_STORAGE_ACCOUNT}
@@ -105,54 +76,13 @@ services:
       context: .
       dockerfile: services/file-observer/Dockerfile
     volumes:
-    network_mode: host
     depends_on:
-      - kafka
+      - webserver
     volumes:
       #  test directory to observe
       - "./volumes/files:/files"
       # client side certs and keys
       - "./volumes/client-certs:/client-certs"
     environment:
-      - KAFKA_TOPIC=${KAFKA_DOS_TOPIC}
-      - KAFKA_BOOTSTRAP=${KAFKA_BOOTSTRAP_SERVERS}
       - MONITOR_DIRECTORY=/files
       - OBSERVER_PARMS=--verbose
-
-  # user service: monitor topic, write to elastic
-  elastic-sink:
-    build:
-      context: .
-      dockerfile: services/elastic-sink/Dockerfile
-    volumes:
-      # client side certs and keys
-      - "./volumes/client-certs:/client-certs"
-    network_mode: host
-    depends_on:
-      - kafka
-      - elastic
-    environment:
-      - KAFKA_TOPIC=${KAFKA_DOS_TOPIC}
-      - KAFKA_BOOTSTRAP=${KAFKA_BOOTSTRAP_SERVERS}
-      - ELASTIC_URL=${ELASTIC_URL}
-
-
-  # Elastic Search
-  # note: on docker for mac, you may need to adjust the docker-machines' config
-  # if you get this error ....
-  # elastic    | ERROR: bootstrap checks failed
-  # elastic    | max virtual memory areas vm.max_map_count [65530] likely too low, increase to at least [262144]
-  # ... see this
-  # https://github.com/elastic/elasticsearch-docker/blob/master/README.md#osx-with-docker-toolbox
-  elastic:
-    image: docker.elastic.co/elasticsearch/elasticsearch:6.0.0
-    volumes:
-      - "./volumes/elastic/backups:/backups/"
-    ports:
-      - "9200:9200"
-    network_mode: host
-    environment:
-      - http.host=0.0.0.0
-      - transport.host=127.0.0.1
-      - xpack.security.enabled=false
-      - path.repo=/backups
