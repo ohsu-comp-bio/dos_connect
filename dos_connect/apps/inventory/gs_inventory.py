@@ -1,4 +1,3 @@
-from kafka import KafkaProducer
 from google.cloud import storage
 
 import json
@@ -57,7 +56,7 @@ def populate_args(argparser):
 
 if __name__ == '__main__':  # pragma: no cover
     argparser = argparse.ArgumentParser(
-        description='Consume blob info from gs, populate kafka')
+        description='Consume blob info from gs, populate webserver')
     populate_args(argparser)
 
     args = argparser.parse_args()
