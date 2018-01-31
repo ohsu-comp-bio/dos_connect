@@ -7,6 +7,7 @@
 import logging
 import os
 import uuid
+import json
 
 
 from elasticsearch import Elasticsearch
@@ -41,13 +42,13 @@ producer = None
 if KAFKA_BOOTSTRAP_SERVERS:
     KAFKA_DOS_TOPIC = os.getenv('KAFKA_DOS_TOPIC', None)
     assert KAFKA_DOS_TOPIC
-    producer = KafkaProducer(bootstrap_servers=self.KAFKA_BOOTSTRAP_SERVERS)
+    producer = KafkaProducer(bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS)
 
 
 def _to_kafka(doc, method):
     if producer:
-        producer.send(KAFKA_DOS_TOPIC,
-                      json.dumps({'method': method, 'doc': doc}))
+        key = json.dumps( [method, doc['urls'][0]['url']] )
+        producer.send(KAFKA_DOS_TOPIC, key=key, value=json.dumps(doc))
         producer.flush()
 
 
