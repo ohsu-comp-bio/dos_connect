@@ -3,6 +3,7 @@ COPY *.* /
 COPY dos_connect /dos_connect
 RUN pip install -r requirements.txt
 CMD  GOOGLE_APPLICATION_CREDENTIALS=/google-auth.json  \
+    DOS_API_KEY=$DOS_API_KEY \
 python -m dos_connect.apps.observers.pubsub_observer  \
 --google_cloud_project $GOOGLE_CLOUD_PROJECT \
 --google_topic $GOOGLE_TOPIC \
