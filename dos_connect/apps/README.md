@@ -10,7 +10,7 @@ Note: the following examples...
 * use the default server configuration:
   `http://localhost:8080`.  Use the `--dos_server` parameter to communicate with your server
 
-* use the default noop_authorizer. Use the `--api_key or DOS_API_KEY envvar` or `--user_pass DOS_USER_PASSWD envvar` to set your authentication requirement
+* use the default noop_authorizer. Use the `--api_key_name --api_key or DOS_API_KEY envvar` or `--user_pass or DOS_USER_PASSWD envvar` to set your authentication requirements
 
 ### gdc ( genomic data commons)
 ```

@@ -53,10 +53,14 @@ def custom_args(argparser):
                            default=DOS_API_KEY)
 
     DOS_USER_PASSWD = os.getenv('DOS_USER_PASSWD', None)
-    argparser.add_argument('--user_pass', '-user_pass',
+    argparser.add_argument('--user_pass', '-up',
                            help=': delimited basic auth environment variable'
                                 ' DOS_USER_PASSWD',
                            default=DOS_USER_PASSWD)
+
+    argparser.add_argument('--api_key_name', '-kn',
+                           help='api key name',
+                           default='X-API-Key')
 
 
 def common_logging(args):
@@ -81,6 +85,7 @@ def client_factory(args):
         hostname = urlparse(args.dos_server).hostname
         if args.api_key:
             http_client.set_api_key(hostname, args.api_key,
+                                    param_name=args.api_key_name,
                                     param_in='header')
         if args.user_pass:
             (user, passwd) = args.user_pass.split(':')
