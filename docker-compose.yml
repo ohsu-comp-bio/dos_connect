@@ -14,18 +14,21 @@ services:
       - ${DOS_CONNECT_WEBSERVER_PORT}:${DOS_CONNECT_WEBSERVER_PORT}  
     environment:
       - ELASTIC_URL=${ELASTIC_URL}
-      - KAFKA_TOPIC=${KAFKA_DOS_TOPIC}
-      - KAFKA_BOOTSTRAP=${KAFKA_BOOTSTRAP_SERVERS}
       - BACKEND=dos_connect.server.elasticsearch_backend
       - DOS_SERVER=${DOS_SERVER}
+      - OS_AUTH_URL=${OS_AUTH_URL}
+      - AUTHORIZER_PROJECTS=${AUTHORIZER_PROJECTS}
+      - AUTHORIZER=${AUTHORIZER}
       - DOS_CONNECT_WEBSERVER_PORT=${DOS_CONNECT_WEBSERVER_PORT}
+      - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS}
+      - KAFKA_DOS_TOPIC=${KAFKA_DOS_TOPIC}
 
 
-  # user service: monitor aws SQS queue
-  aws-observer:
+  # user service: inventory s3 endpoint
+  swift-inventory:
     build:
       context: .
-      dockerfile: services/aws-observer/Dockerfile
+      dockerfile: services/s3-inventory/Dockerfile
     depends_on:
       - webserver
     volumes:
@@ -33,65 +36,13 @@ services:
       - "./volumes/client-certs:/client-certs"
     environment:
       - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - OBSERVER_PARMS=--verbose
-      - SQS_QUEUE_NAME=${SQS_QUEUE_NAME}
+      - AWS_ACCESS_KEY_ID=${SWIFT_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${SWIFT_SECRET_ACCESS_KEY}
+      - OBSERVER_PARMS=--verbose --endpoint_url http://10.96.11.20:8080/
       - DOS_SERVER=${DOS_SERVER}
+      - BUCKET_NAME=biostream
+      - DOS_API_KEY=${DOS_API_KEY}
 
-  # user service: monitor aws SQS queue
-  google-observer:
-    build:
-      context: .
-      dockerfile: services/google-observer/Dockerfile
-    volumes:
-      # client side certs and keys
-      - "./volumes/client-certs:/client-certs"
-    depends_on:
-      - webserver
-    environment:
-      - PUBSUB_QUEUE_NAME=${PUBSUB_QUEUE_NAME}
-      - GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT}
-      - GOOGLE_TOPIC=${GOOGLE_TOPIC}
-      - GOOGLE_SUBSCRIPTION_NAME=${GOOGLE_SUBSCRIPTION_NAME}
-      - DOS_SERVER=${DOS_SERVER}
-
-  # user service: monitor azure storage queue
-  azure-observer:
-    build:
-      context: .
-      dockerfile: services/azure-observer/Dockerfile
-    volumes:
-      # client side certs and keys
-      - "./volumes/client-certs:/client-certs"
-    depends_on:
-      - webserver
-    environment:
-      - QUEUE_STORAGE_ACCOUNT=${QUEUE_STORAGE_ACCOUNT}
-      - QUEUE_STORAGE_ACCESS_KEY=${QUEUE_STORAGE_ACCESS_KEY}
-      - BLOB_STORAGE_ACCOUNT=${BLOB_STORAGE_ACCOUNT}
-      - BLOB_STORAGE_ACCESS_KEY=${BLOB_STORAGE_ACCESS_KEY}
-      - AZURE_QUEUE=${AZURE_QUEUE}
-      - DOS_SERVER=${DOS_SERVER}
-
-
-  # user service: monitor file system
-  file-observer:
-    build:
-      context: .
-      dockerfile: services/file-observer/Dockerfile
-    volumes:
-    depends_on:
-      - webserver
-    volumes:
-      #  test directory to observe
-      - "./volumes/files:/files"
-      # client side certs and keys
-      - "./volumes/client-certs:/client-certs"
-    environment:
-      - MONITOR_DIRECTORY=/files
-      - OBSERVER_PARMS=--verbose
-      - DOS_SERVER=${DOS_SERVER}
 
 
   # user service: inventory s3 endpoint
@@ -111,39 +62,118 @@ services:
       - OBSERVER_PARMS=--verbose
       - DOS_SERVER=${DOS_SERVER}
       - BUCKET_NAME=${AWS_TEST_BUCKET}
+      - DOS_API_KEY=${DOS_API_KEY}
 
-
-  # user service: inventory google endpoint
-  google-inventory:
-    build:
-      context: .
-      dockerfile: services/google-inventory/Dockerfile
-    depends_on:
-      - webserver
-    volumes:
-      # client side certs and keys
-      - "./volumes/client-certs:/client-certs"
-    environment:
-      - OBSERVER_PARMS=--verbose
-      - DOS_SERVER=${DOS_SERVER}
-      - BUCKET_NAME=${GS_TEST_BUCKET}
-
-
-  # user service: inventory azure endpoint
-  azure-inventory:
-    build:
-      context: .
-      dockerfile: services/azure-inventory/Dockerfile
-    depends_on:
-      - webserver
-    volumes:
-      # client side certs and keys
-      - "./volumes/client-certs:/client-certs"
-    environment:
-      - QUEUE_STORAGE_ACCOUNT=${QUEUE_STORAGE_ACCOUNT}
-      - QUEUE_STORAGE_ACCESS_KEY=${QUEUE_STORAGE_ACCESS_KEY}
-      - BLOB_STORAGE_ACCOUNT=${BLOB_STORAGE_ACCOUNT}
-      - BLOB_STORAGE_ACCESS_KEY=${BLOB_STORAGE_ACCESS_KEY}
-      - OBSERVER_PARMS=--verbose
-      - DOS_SERVER=${DOS_SERVER}
-      - BUCKET_NAME=${AZURE_TEST_BUCKET}
+ 
+   # user service: monitor aws SQS queue
+   aws-observer:
+     build:
+       context: .
+       dockerfile: services/aws-observer/Dockerfile
+     depends_on:
+       - webserver
+     volumes:
+       # client side certs and keys
+       - "./volumes/client-certs:/client-certs"
+     environment:
+       - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
+       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+       - OBSERVER_PARMS=--verbose
+       - SQS_QUEUE_NAME=${SQS_QUEUE_NAME}
+       - DOS_SERVER=${DOS_SERVER}
+       - DOS_API_KEY=${DOS_API_KEY}
+ 
+   # user service: monitor aws SQS queue
+   google-observer:
+     build:
+       context: .
+       dockerfile: services/google-observer/Dockerfile
+     volumes:
+       # client side certs and keys
+       - "./volumes/client-certs:/client-certs"
+     depends_on:
+       - webserver
+     environment:
+       - PUBSUB_QUEUE_NAME=${PUBSUB_QUEUE_NAME}
+       - GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT}
+       - GOOGLE_TOPIC=${GOOGLE_TOPIC}
+       - GOOGLE_SUBSCRIPTION_NAME=${GOOGLE_SUBSCRIPTION_NAME}
+       - DOS_SERVER=${DOS_SERVER}
+       - DOS_API_KEY=${DOS_API_KEY}
+ 
+   # user service: monitor azure storage queue
+   azure-observer:
+     build:
+       context: .
+       dockerfile: services/azure-observer/Dockerfile
+     volumes:
+       # client side certs and keys
+       - "./volumes/client-certs:/client-certs"
+     depends_on:
+       - webserver
+     environment:
+       - QUEUE_STORAGE_ACCOUNT=${QUEUE_STORAGE_ACCOUNT}
+       - QUEUE_STORAGE_ACCESS_KEY=${QUEUE_STORAGE_ACCESS_KEY}
+       - BLOB_STORAGE_ACCOUNT=${BLOB_STORAGE_ACCOUNT}
+       - BLOB_STORAGE_ACCESS_KEY=${BLOB_STORAGE_ACCESS_KEY}
+       - AZURE_QUEUE=${AZURE_QUEUE}
+       - DOS_SERVER=${DOS_SERVER}
+       - DOS_API_KEY=${DOS_API_KEY}
+ 
+ 
+   # user service: monitor file system
+   file-observer:
+     build:
+       context: .
+       dockerfile: services/file-observer/Dockerfile
+     volumes:
+     depends_on:
+       - webserver
+     volumes:
+       #  test directory to observe
+       - "./volumes/files:/files"
+       # client side certs and keys
+       - "./volumes/client-certs:/client-certs"
+     environment:
+       - MONITOR_DIRECTORY=/files
+       - OBSERVER_PARMS=--verbose
+       - DOS_SERVER=${DOS_SERVER}
+       - DOS_API_KEY=${DOS_API_KEY}
+ 
+   # user service: inventory google endpoint
+   google-inventory:
+     build:
+       context: .
+       dockerfile: services/google-inventory/Dockerfile
+     depends_on:
+       - webserver
+     volumes:
+       # client side certs and keys
+       - "./volumes/client-certs:/client-certs"
+     environment:
+       - OBSERVER_PARMS=--verbose
+       - DOS_SERVER=${DOS_SERVER}
+       - BUCKET_NAME=${GS_TEST_BUCKET}
+       - DOS_API_KEY=${DOS_API_KEY}
+ 
+ 
+   # user service: inventory azure endpoint
+   azure-inventory:
+     build:
+       context: .
+       dockerfile: services/azure-inventory/Dockerfile
+     depends_on:
+       - webserver
+     volumes:
+       # client side certs and keys
+       - "./volumes/client-certs:/client-certs"
+     environment:
+       - QUEUE_STORAGE_ACCOUNT=${QUEUE_STORAGE_ACCOUNT}
+       - QUEUE_STORAGE_ACCESS_KEY=${QUEUE_STORAGE_ACCESS_KEY}
+       - BLOB_STORAGE_ACCOUNT=${BLOB_STORAGE_ACCOUNT}
+       - BLOB_STORAGE_ACCESS_KEY=${BLOB_STORAGE_ACCESS_KEY}
+       - OBSERVER_PARMS=--verbose
+       - DOS_SERVER=${DOS_SERVER}
+       - BUCKET_NAME=${AZURE_TEST_BUCKET}
+       - DOS_API_KEY=${DOS_API_KEY}
