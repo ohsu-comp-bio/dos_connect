@@ -9,6 +9,7 @@ import urllib
 from botocore.client import Config
 from urlparse import urlparse
 from .. import common_args, common_logging,  store, custom_args, md5sum
+from . import get_offset, save_offset
 
 logger = logging.getLogger('s3_inventory')
 
@@ -69,11 +70,16 @@ class DOSHandler(object):
                  args=None):
         super(DOSHandler, self).__init__()
         self.dry_run = args.dry_run
+        self.last_modified = None
 
     def on_any_event(self, endpoint_url, region, bucket_name, record,
                      metadata):
         try:
             self.process(endpoint_url, region, bucket_name, record, metadata)
+            if not self.last_modified \
+               or self.last_modified < record['LastModified']:
+                save_offset({'LastModified': record['LastModified']})
+                self.last_modified = record['LastModified']
         except Exception as e:
             logger.exception(e)
 
@@ -101,6 +107,10 @@ if __name__ == "__main__":
     common_logging(args)
     event_handler = DOSHandler(args)
 
+    offset = get_offset()
+    last_modified = None
+    if offset:
+        last_modified = offset['LastModified']
     # support non aws hosts
     if args.endpoint_url:
         use_ssl = True
@@ -118,9 +128,14 @@ if __name__ == "__main__":
     for page in page_iterator:
         region = None
         if 'x-amz-bucket-region' in page['ResponseMetadata']['HTTPHeaders']:
-            region = page['ResponseMetadata']['HTTPHeaders']['x-amz-bucket-region']
+            region = \
+                page['ResponseMetadata']['HTTPHeaders']['x-amz-bucket-region']
         for record in page['Contents']:
-            logger.debug(record)
+            # skip if we already harvested
+            if last_modified and record['LastModified'] <= last_modified:
+                logger.info('skipping: {}'.format(record['Key']))
+                continue
+            # get the metadata associated with object
             head = client.head_object(Bucket=args.bucket_name,
                                       Key=record['Key'])
             metadata = head['Metadata'] if ('Metadata' in head) else None
