@@ -24,6 +24,12 @@ update = getattr(backend, 'update')
 delete = getattr(backend, 'delete')
 search = getattr(backend, 'search')
 
+# from replicator import replicate
+replicator_name = os.getenv('REPLICATOR', 'dos_connect.server.noop_replicator')
+replicator = import_module(replicator_name)
+replicate = getattr(replicator, 'replicate')
+
+
 DEFAULT_PAGE_SIZE = 100
 
 init_logging()
@@ -45,6 +51,7 @@ def CreateDataObject(**kwargs):
     doc = add_created_timestamps(body)
     doc.current = True
     doc = save(doc, 'data_objects')
+    replicate(doc, 'CREATE')
     return({"data_object_id": doc.id}, 200)
 
 
@@ -108,6 +115,7 @@ def UpdateDataObject(**kwargs):
         # new is current
         data_object.current = True
         save(data_object, 'data_objects')
+        replicate(data_object, 'UPDATE')
         return({"data_object_id": properties.id}, 200)
     except Exception as e:
         log.exception(e)
@@ -121,6 +129,7 @@ def DeleteDataObject(**kwargs):
     """
     properties = AttributeDict({'id': kwargs['data_object_id']})
     delete(properties)
+    replicate(properties, 'DELETE')
     return({"data_object_id": properties.id}, 200)
 
 
@@ -157,6 +166,7 @@ def CreateDataBundle(**kwargs):
     doc = add_created_timestamps(body)
     doc.current = True
     doc = save(doc, 'data_bundles')
+    replicate(doc, 'CREATE')
     return({"data_bundle_id": doc.id}, 200)
 
 
@@ -202,6 +212,7 @@ def UpdateDataBundle(**kwargs):
         data_bundle.current = True
         data_bundle.id = old_data_bundle.id
         save(data_bundle, 'data_bundles')
+        replicate(data_bundle, 'UPDATE')
         return({"data_bundle_id": properties.id}, 200)
     except Exception as e:
         log.exception(e)
@@ -231,6 +242,7 @@ def DeleteDataBundle(**kwargs):
     """
     properties = AttributeDict({'id': kwargs['data_bundle_id']})
     delete(properties, 'data_bundles')
+    replicate(data_bundle, 'DELETE')
     return(kwargs, 200)
 
 

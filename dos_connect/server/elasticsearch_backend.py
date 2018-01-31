@@ -7,12 +7,10 @@
 import logging
 import os
 import uuid
-import json
 
 
 from elasticsearch import Elasticsearch
 from elasticsearch_dsl import Search, Q
-from kafka import KafkaProducer
 
 from utils import AttributeDict, now, add_created_timestamps, \
                   add_updated_timestamps
@@ -37,21 +35,6 @@ else:
     log.info('ES_REFRESH_ON_PERSIST set, ES writes will refresh index')
 
 
-KAFKA_BOOTSTRAP_SERVERS = os.getenv('KAFKA_BOOTSTRAP_SERVERS', None)
-producer = None
-if KAFKA_BOOTSTRAP_SERVERS:
-    KAFKA_DOS_TOPIC = os.getenv('KAFKA_DOS_TOPIC', None)
-    assert KAFKA_DOS_TOPIC
-    producer = KafkaProducer(bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS)
-
-
-def _to_kafka(doc, method):
-    if producer:
-        key = json.dumps( [method, doc['urls'][0]['url']] )
-        producer.send(KAFKA_DOS_TOPIC, key=key, value=json.dumps(doc))
-        producer.flush()
-
-
 def save(doc, index='data_objects'):
     """
     save the body in the index, ensure version and id set
@@ -73,7 +56,6 @@ def save(doc, index='data_objects'):
                           op_type='index',
                           refresh=ES_REFRESH_ON_PERSIST
                           )
-    _to_kafka(doc, 'CREATE')
     return doc
 
 
@@ -88,7 +70,6 @@ def update(_id, doc, index='data_objects'):
                            body={"doc": doc},
                            refresh=ES_REFRESH_ON_PERSIST
                            )
-    _to_kafka(doc, 'UPDATE')
     log.debug(result)
 
 
@@ -144,5 +125,4 @@ def delete(properties, index='data_objects'):
         v = properties[k]
         clauses.append('+{}:"{}"'.format(k, v))
     s = s.query("query_string", query=' '.join(clauses))
-    _to_kafka(properties, 'DELETE')
     s.delete()
