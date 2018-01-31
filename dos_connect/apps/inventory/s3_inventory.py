@@ -116,8 +116,6 @@ if __name__ == "__main__":
     paginator = client.get_paginator('list_objects')
     page_iterator = paginator.paginate(Bucket=args.bucket_name)
     for page in page_iterator:
-        logger.debug(page)
-
         region = None
         if 'x-amz-bucket-region' in page['ResponseMetadata']['HTTPHeaders']:
             region = page['ResponseMetadata']['HTTPHeaders']['x-amz-bucket-region']
