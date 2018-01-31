@@ -28,22 +28,23 @@ def _check_auth(token):
                'X-Subject-Token': token}
     token_info = requests.get(url, headers=headers).json()
     if 'token' not in token_info:
-        log.debug(token_info)
+        log.error(url)
+        log.error(token_info)
         return False
 
     url = '{}/auth/projects'.format(os.environ.get('OS_AUTH_URL'))
     headers = {'X-Auth-Token': token}
     project_info = requests.get(url, headers=headers).json()
     if 'projects' not in project_info:
-        log.debug('no project_info for {}'.format(token))
-        log.debug(project_info)
+        log.error('no project_info for {}'.format(token))
+        log.error(project_info)
         return False
     user_projects = [p['name'] for p in project_info['projects']]
     auth_projects = os.environ.get('AUTHORIZER_PROJECTS').split(',')
     auth_projects = [p.strip() for p in auth_projects]
     matched_projects = [p for p in auth_projects if p in user_projects]
     if len(matched_projects) == 0:
-        log.debug('no matches for {} {}'.format(user_projects, auth_projects))
+        log.error('no matches for {} {}'.format(user_projects, auth_projects))
         return False
 
     return True
@@ -59,8 +60,10 @@ def _authenticate():
 @decorator
 def authorization_check(f, *args, **kwargs):
     '''wrap functions for authorization'''
-    auth = flask.request.headers['Api-Key']
-    # log.debug('authorization_check auth {}'.format(auth))
+    auth = flask.request.headers.get('Api-Key', None)
+    if not auth:
+    	auth = flask.request.headers.get('X-API-Key', None)
+    log.error('authorization_check auth {}'.format(auth))
     if not auth or not _check_auth(auth):
         return _authenticate()
     return f(*args, **kwargs)
