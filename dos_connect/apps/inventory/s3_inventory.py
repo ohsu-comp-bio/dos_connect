@@ -55,7 +55,7 @@ def to_dos(endpoint_url, region, bucket_name, record, metadata):
           # The time, in ISO-8601,when S3 finished processing the request,
           "created":  record['LastModified'].isoformat(),
           "updated":  record['LastModified'].isoformat(),
-          # TODO multipart ...
+          # multipart ...
           "checksums": [{'checksum': md5sum(etag=etag,
                          bucket_name=bucket_name, key=_id), 'type': 'md5'}],
           "urls": [_url]
@@ -70,16 +70,12 @@ class DOSHandler(object):
                  args=None):
         super(DOSHandler, self).__init__()
         self.dry_run = args.dry_run
-        self.last_modified = None
 
     def on_any_event(self, endpoint_url, region, bucket_name, record,
                      metadata):
         try:
             self.process(endpoint_url, region, bucket_name, record, metadata)
-            if not self.last_modified \
-               or self.last_modified < record['LastModified']:
-                save_offset({'LastModified': record['LastModified']})
-                self.last_modified = record['LastModified']
+            save_offset({'Key': record['Key']})
         except Exception as e:
             logger.exception(e)
 
@@ -108,9 +104,9 @@ if __name__ == "__main__":
     event_handler = DOSHandler(args)
 
     offset = get_offset()
-    last_modified = None
+    last_key = None
     if offset:
-        last_modified = offset['LastModified']
+        last_key = offset['Key']
     # support non aws hosts
     if args.endpoint_url:
         use_ssl = True
@@ -123,21 +119,22 @@ if __name__ == "__main__":
         )
     else:
         client = boto3.client('s3')
-    paginator = client.get_paginator('list_objects')
-    page_iterator = paginator.paginate(Bucket=args.bucket_name)
+    
+    paginator = client.get_paginator('list_objects_v2')
+    if last_key:
+    	page_iterator = paginator.paginate(Bucket=args.bucket_name, StartAfter=last_key)
+    else:
+    	page_iterator = paginator.paginate(Bucket=args.bucket_name)
     for page in page_iterator:
         region = None
         if 'x-amz-bucket-region' in page['ResponseMetadata']['HTTPHeaders']:
             region = \
                 page['ResponseMetadata']['HTTPHeaders']['x-amz-bucket-region']
         for record in page['Contents']:
-            # skip if we already harvested
-            if last_modified and record['LastModified'] <= last_modified:
-                logger.info('skipping: {}'.format(record['Key']))
-                continue
             # get the metadata associated with object
-            head = client.head_object(Bucket=args.bucket_name,
-                                      Key=record['Key'])
-            metadata = head['Metadata'] if ('Metadata' in head) else None
+            #head = client.head_object(Bucket=args.bucket_name,
+            #                          Key=record['Key'])
+            #metadata = head['Metadata'] if ('Metadata' in head) else None
+            metadata = None
             event_handler.on_any_event(args.endpoint_url, region,
                                        args.bucket_name, record, metadata)

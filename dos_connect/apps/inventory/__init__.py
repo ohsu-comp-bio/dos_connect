@@ -20,6 +20,5 @@ def get_offset():
 
 def save_offset(offset):
     """ save offset dict """
-    print offset
     with open('offset.pickle', 'w') as data_file:
         pickle.dump(offset, data_file)
