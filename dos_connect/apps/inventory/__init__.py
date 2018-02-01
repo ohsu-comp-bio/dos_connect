@@ -12,7 +12,6 @@ def get_offset():
     try:
         with open('offset.pickle') as data_file:
             offset = pickle.load(data_file)
-            print offset
     except Exception as e:
         pass
     return offset
