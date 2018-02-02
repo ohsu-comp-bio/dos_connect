@@ -1,0 +1,25 @@
+---
+version: '2'
+services:
+
+
+  webserver:
+    build:
+      context: .
+      dockerfile: services/webserver/Dockerfile
+    volumes:
+      # client side certs and keys
+      - "./volumes/client-certs:/client-certs"
+    ports:
+      - ${DOS_CONNECT_WEBSERVER_PORT}:${DOS_CONNECT_WEBSERVER_PORT}
+    environment:
+      - ELASTIC_URL=${ELASTIC_URL}
+      - BACKEND=dos_connect.server.elasticsearch_backend
+      - DOS_SERVER=${DOS_SERVER}
+      - OS_AUTH_URL=${DOS_SERVER_OS_AUTH_URL}
+      - AUTHORIZER_PROJECTS=${AUTHORIZER_PROJECTS}
+      - AUTHORIZER=${AUTHORIZER}
+      - DOS_CONNECT_WEBSERVER_PORT=${DOS_CONNECT_WEBSERVER_PORT}
+      - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS}
+      - KAFKA_DOS_TOPIC=${KAFKA_DOS_TOPIC}
+      - REPLICATOR=${REPLICATOR}
