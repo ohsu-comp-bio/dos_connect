@@ -27,8 +27,10 @@ def add_created_timestamps(doc):
     """
     Adds created and updated timestamps to the document.
     """
-    doc['created'] = now()
-    doc['updated'] = now()
+    if 'created' not in doc:
+        doc['created'] = now()
+    if 'updated' not in doc:
+        doc['updated'] = now()
     return doc
 
 
@@ -36,5 +38,6 @@ def add_updated_timestamps(doc):
     """
     Adds updated timestamp to the document.
     """
-    doc['updated'] = now()
+    if 'updated' not in doc:
+        doc['updated'] = now()
     return doc
