@@ -24,21 +24,49 @@ This project provides two high level capabilities:
 * observation: long lived services to observe the object store and populate a kafka topic with [data-object-schema](https://github.com/ga4gh/data-object-schemas/blob/master/proto/data_objects.proto) records. These observations catch add, moves and deletes to the object store.
 * inventory: on demand commands to capture a snapshot of the object store.  Inventory commands populate the same queue
 
-For development and proof of concept, a docker-compose setup is provided.
-* Kafka is used to enable multiple downstream consumer ETL
-* An elastic-sink service is provided to illustrate the consuming from the topic and maintaining a user facing query store.
-`Note`: there are no fixed dependencies, see customizations if you would like to use other backends.
-
-![image](https://user-images.githubusercontent.com/47808/32701215-40c677cc-c786-11e7-994a-0423ce3d8e9a.png)
+![image](https://user-images.githubusercontent.com/47808/35756499-80141c06-0820-11e8-847f-a24dd160642e.png)
 
 
 
-### install
+### customizations
 
-```
-pip install -r requirements.txt --process-dependency-links -I
-```
+The server and client both leverage `plugin duck-typing`
+
+Server plugins:
+* `BACKEND`: for storage. Implementations:  [in-memory](https://github.com/ohsu-comp-bio/dos_connect/blob/master/dos_connect/server/memory_backend.py) and [elasticsearch](https://github.com/ohsu-comp-bio/dos_connect/blob/master/dos_connect/server/elasticsearch_backend.py).  e.g. BACKEND=dos_connect.server.elastic_backend
+* `AUTHORIZER`: for AA.
+[noop](https://github.com/ohsu-comp-bio/dos_connect/blob/master/dos_connect/server/noop_authorizer.py), [keystone](https://github.com/ohsu-comp-bio/dos_connect/blob/master/dos_connect/server/keystone_api_key_authorizer.py), and [basic](https://github.com/ohsu-comp-bio/dos_connect/blob/master/dos_connect/server/basic_authorizer.py).
+ e.g. AUTHORIZER=dos_connect.server.keystone_api_key_authorizer
+* `REPLICATOR`: for downstream consumers.
+[noop](https://github.com/ohsu-comp-bio/dos_connect/blob/master/dos_connect/server/noop_replicator.py), [keystone](https://github.com/ohsu-comp-bio/dos_connect/blob/master/dos_connect/server/kafka_replicator.py)
+ e.g. REPLICATOR=dos_connect.server.kafka_replicator
+
+
+Client plugins:
+
+All observers and inventory tasks leverage a middleware plugin capability.
+* user_metadata(): customize the collection of metadata
+* before_store(): modify the data_object before persisting
+* md5sum(): calculate the md5 of the file
+* id(): customize id
+e.g. CUSTOMIZER=dos_connect.apps.aws_customizer
+
+To specify your own customizer, set the `CUSTOMIZER` environmental variable.
+
+For example:
+AWS S3 returns a special hash for [multipart files](https://forums.aws.amazon.com/thread.jspa?messageID=456442).  The [aws_customizer](https://github.com/ohsu-comp-bio/dos_connect/blob/master/dos_connect/apps/aws_customizer.py) uses a [lambda](https://github.com/ohsu-comp-bio/dos_connect/tree/master/dos_connect/apps/aws-md5) to calculate the true md5 hash of multipart files.  Other client customizers include [noop](https://github.com/ohsu-comp-bio/dos_connect/blob/master/dos_connect/apps/noop_customizer.py), [url_as_id](https://github.com/ohsu-comp-bio/dos_connect/blob/master/dos_connect/apps/url_as_id_customizer.py), and [smmart](https://github.com/ohsu-comp-bio/dos_connect/blob/master/dos_connect/apps/smmart_customizer.py) (obfuscates paths and associates user metadata)
+
 
 ### setup
 see [here](dos_connect/server/README.md)
 
+
+### ohsu implementation:
+
+* see [swagger](https://dms-dev.compbio.ohsu.edu/ga4gh/ui)
+
+* note: you will need to belong to openstack and provide a token from `openstack token issue`
+
+![image](https://user-images.githubusercontent.com/47808/35757585-9e3afd90-0824-11e8-953a-7277104f734c.png)
+
+* see kafak topic 'dos-events' for stream
