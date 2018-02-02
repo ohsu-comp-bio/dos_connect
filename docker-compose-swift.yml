@@ -1,0 +1,27 @@
+---
+version: '2'
+services:
+
+
+  # user service: inventory s3 endpoint
+  swift-inventory:
+    build:
+      context: .
+      dockerfile: services/swift-inventory/Dockerfile
+#    depends_on:
+#      - webserver
+    volumes:
+      # client side certs and keys
+      - "./volumes/client-certs:/client-certs"
+    environment:
+      - OBSERVER_PARMS=
+      - DOS_SERVER=${DOS_SERVER}
+      - BUCKET_NAME=biostream
+      - SLEEP=${SLEEP}
+      - OS_REGION_NAME=${OS_REGION_NAME}
+      - OS_TENANT_ID=${OS_TENANT_ID}
+      - OS_PASSWORD=${OS_PASSWORD}
+      - OS_AUTH_URL=${OS_AUTH_URL}
+      - OS_USERNAME=${OS_USERNAME}
+      - OS_TENANT_NAME=${OS_TENANT_NAME}
+      - CUSTOMIZER=dos_connect.apps.url_as_id_customizer

@@ -21,7 +21,9 @@ log = logging.getLogger(__name__)
 DEFAULT_PAGE_SIZE = 100
 
 # connect to elastic
-client = Elasticsearch()
+
+ELASTIC_URL = os.getenv('ELASTIC_URL', 'localhost:9200')
+client = Elasticsearch([ELASTIC_URL])
 assert client.info()
 # check persistence options in env
 ES_REFRESH_ON_PERSIST = os.getenv('ES_REFRESH_ON_PERSIST', 'False')
@@ -123,5 +125,4 @@ def delete(properties, index='data_objects'):
         v = properties[k]
         clauses.append('+{}:"{}"'.format(k, v))
     s = s.query("query_string", query=' '.join(clauses))
-    log.debug(s.to_dict())
     s.delete()

@@ -2,11 +2,10 @@
 import os
 import sys
 import json
-import boto3
+import swiftclient.client as swiftclient
 import logging
 import argparse
 import urllib
-from botocore.client import Config
 from urlparse import urlparse
 from .. import common_args, common_logging,  store, custom_args, md5sum
 from . import get_offset, save_offset
@@ -16,15 +15,16 @@ logger = logging.getLogger('s3_inventory')
 
 def to_dos(endpoint_url, region, bucket_name, record, metadata):
         """
-        {u'LastModified':
-            datetime.datetime(2017, 10, 23, 16, 20, 45, tzinfo=tzutc()),
-        u'ETag': '"d3b3a66c7235c6b09a55a626861f5f91"',
-        u'StorageClass': 'STANDARD',
-        u'Key': 'passport photo.JPG', u'Size': 341005}
+        {u'last_modified': u'2018-02-01T01:15:39.623630',
+         u'hash': u'7ddfbd9eafcd73c68ad72d1a792c96bb',
+         u'name': u'test/ttt',
+         u'content_type': u'application/octet-stream',
+         u'x-object-meta-foo': u'bar',
+         u'bytes': 169}
         """
         _event_type = 'ObjectCreated:Put'
 
-        _id = record['Key']
+        _id = record['name']
         _id_parts = _id.split('/')
         _id_parts[-1] = urllib.quote_plus(_id_parts[-1])
         _id = '/'.join(_id_parts)
@@ -36,7 +36,6 @@ def to_dos(endpoint_url, region, bucket_name, record, metadata):
             _url = 's3://{}/{}/{}'.format(parsed.netloc, bucket_name,  _id)
 
         _system_metadata = {
-            'StorageClass': record['StorageClass'],
             "event_type": _event_type,
             "bucket_name": bucket_name
         }
@@ -45,16 +44,16 @@ def to_dos(endpoint_url, region, bucket_name, record, metadata):
             "system_metadata": _system_metadata,
             "user_metadata": metadata,
         }
-        etag = record['ETag']
+        etag = record['hash']
         if etag.startswith('"') and etag.endswith('"'):
             etag = etag[1:-1]
         if etag.startswith('%22') and etag.endswith('%22'):
             etag = etag[3:-3]
         return {
-          "file_size": record['Size'],
+          "file_size": record['bytes'],
           # The time, in ISO-8601,when S3 finished processing the request,
-          "created":  record['LastModified'].isoformat(),
-          "updated":  record['LastModified'].isoformat(),
+          "created":  record['last_modified'],
+          "updated":  record['last_modified'],
           # multipart ...
           "checksums": [{'checksum': md5sum(etag=etag,
                          bucket_name=bucket_name, key=_id), 'type': 'md5'}],
@@ -75,7 +74,7 @@ class DOSHandler(object):
                      metadata):
         try:
             self.process(endpoint_url, region, bucket_name, record, metadata)
-            save_offset({'Key': record['Key']})
+            save_offset({'name': record['name']})
         except Exception as e:
             logger.exception(e)
 
@@ -86,14 +85,11 @@ class DOSHandler(object):
 
 
 if __name__ == "__main__":
-
+    # setup ...
     argparser = argparse.ArgumentParser(
         description='Consume events from bucket, populate store')
-    argparser.add_argument('--endpoint_url', '-ep',
-                           help='''for swift, ceph, other non-aws endpoints''',
-                           default=None)
     argparser.add_argument('bucket_name',
-                           help='''bucket_name to inventory''',
+                           help='bucket_name to inventory',
                            )
     common_args(argparser)
     custom_args(argparser)
@@ -101,40 +97,51 @@ if __name__ == "__main__":
     args = argparser.parse_args()
 
     common_logging(args)
+
+    # ensure user ran OS source command
+    OS_REGION_NAME = os.environ.get('OS_REGION_NAME', None)
+    OS_TENANT_ID = os.environ.get('OS_TENANT_ID', None)
+    OS_PASSWORD = os.environ.get('OS_PASSWORD', None)
+    OS_AUTH_URL = os.environ.get('OS_AUTH_URL', None)
+    OS_USERNAME = os.environ.get('OS_USERNAME', None)
+    OS_TENANT_NAME = os.environ.get('OS_TENANT_NAME', None)
+    assert OS_REGION_NAME, 'missing envvar OS_REGION_NAME'
+    assert OS_TENANT_ID, 'missing envvar OS_TENANT_ID'
+    assert OS_PASSWORD, 'missing envvar OS_PASSWORD'
+    assert OS_AUTH_URL, 'missing envvar OS_AUTH_URL'
+    assert OS_USERNAME, 'missing envvar OS_USERNAME'
+    assert OS_TENANT_NAME, 'missing envvar OS_TENANT_NAME'
+
+    # get connection
+    swift = swiftclient.Connection(authurl=OS_AUTH_URL,
+                                   user=OS_USERNAME,
+                                   key=OS_PASSWORD,
+                                   tenant_name=OS_TENANT_NAME,
+                                   auth_version='2')
+
+    # do we have a saved offset?
+    offset = get_offset()
+    last_name = None
+    if offset:
+        last_name = offset['name']
+
+    (container, objects) = swift.get_container(args.bucket_name,
+                                               marker=last_name,
+                                               full_listing=True)
+    # set token in args
+    args.api_key = swift.token
+
+    # our handler
     event_handler = DOSHandler(args)
 
-    offset = get_offset()
-    last_key = None
-    if offset:
-        last_key = offset['Key']
-    # support non aws hosts
-    if args.endpoint_url:
-        use_ssl = True
-        if args.endpoint_url.startswith('http://'):
-            use_ssl = False
-        client = boto3.client(
-            's3', endpoint_url=args.endpoint_url, use_ssl=use_ssl,
-            config=Config(s3={'addressing_style': 'path'},
-                          signature_version='s3')
-        )
-    else:
-        client = boto3.client('s3')
-    
-    paginator = client.get_paginator('list_objects_v2')
-    if last_key:
-    	page_iterator = paginator.paginate(Bucket=args.bucket_name, StartAfter=last_key)
-    else:
-    	page_iterator = paginator.paginate(Bucket=args.bucket_name)
-    for page in page_iterator:
-        region = None
-        if 'x-amz-bucket-region' in page['ResponseMetadata']['HTTPHeaders']:
-            region = \
-                page['ResponseMetadata']['HTTPHeaders']['x-amz-bucket-region']
-        for record in page['Contents']:
-            # get the metadata associated with object
-            #head = client.head_object(Bucket=args.bucket_name,
-            #                          Key=record['Key'])
-            #metadata = head['Metadata'] if ('Metadata' in head) else None
-            metadata = None
-            event_handler.on_any_event(args.endpoint_url, region,
-                                       args.bucket_name, record, metadata)
+    # iterate through objects
+    for obj in objects:
+        # need a separate call to get meta :-(
+        headers = swift.head_object(container=args.bucket_name,
+                                    obj=obj['name'])
+        metadata = {}
+        for k in headers:
+            if k.startswith('x-object-meta-'):
+                metadata[k] = headers[k]
+        event_handler.on_any_event(swift.url, None,
+                                   args.bucket_name, obj, metadata)

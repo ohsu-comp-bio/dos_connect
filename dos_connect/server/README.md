@@ -8,6 +8,11 @@ The dos connect server has a pluggable model for:
 This readme guides you through the setup and example use cases.
 We use s3_inventory for these examples, other apps work the same.
 
+## setup
+```
+export  $(cat .env | grep -v "#" | xargs )
+```
+
 ## default
 
 * http

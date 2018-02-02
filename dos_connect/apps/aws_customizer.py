@@ -36,8 +36,5 @@ def md5sum(**kwargs):
 
 def id(**kwargs):
     """ use the checksum as the key """
-    print kwargs
     data_object = kwargs.get('data_object', None)
-    logger.error('id')
-    logger.error(data_object)
     return data_object.checksums[0].checksum

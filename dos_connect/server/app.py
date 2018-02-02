@@ -43,8 +43,4 @@ if __name__ == '__main__':
     argparser.add_argument('-P', '--port', default=8080, type=int)
     argparser.add_argument('-K', '--key_file', default=None)
     argparser.add_argument('-C', '--certificate_file', default=None)
-    # argparser.add_argument('-A', '--authorizer',
-    #                        default='dos_connect.server.basic_authorizer')
-    # argparser.add_argument('-B', '--backend',
-    #                        default='dos_connect.server.elasticsearch_backend')
     main(argparser.parse_args())
