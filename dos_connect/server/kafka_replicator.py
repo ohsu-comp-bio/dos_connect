@@ -5,6 +5,8 @@
 
 import logging
 from kafka import KafkaProducer
+import os
+import json
 
 log = logging.getLogger(__name__)
 
@@ -26,3 +28,5 @@ def replicate(doc, method):
         producer.send(KAFKA_DOS_TOPIC,
                       json.dumps({'method': method, 'doc': doc}))
         producer.flush()
+    else:
+        log.warning('producer not configured')
