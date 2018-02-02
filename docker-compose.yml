@@ -45,6 +45,7 @@ services:
       - OS_AUTH_URL=${OS_AUTH_URL}
       - OS_USERNAME=${OS_USERNAME}
       - OS_TENANT_NAME=${OS_TENANT_NAME}
+      - CUSTOMIZER=dos_connect.apps.url_as_id_customizer
 
 
   # user service: inventory s3 endpoint
