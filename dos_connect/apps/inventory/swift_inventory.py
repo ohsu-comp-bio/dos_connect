@@ -88,19 +88,9 @@ if __name__ == "__main__":
     # setup ...
     argparser = argparse.ArgumentParser(
         description='Consume events from bucket, populate store')
-    argparser.add_argument('--endpoint_url', '-ep',
-                           help='swift storage url i.e. '
-                           'http://XXX/v1/AUTH_xxxxxxx',
-                           default=None)
     argparser.add_argument('bucket_name',
                            help='bucket_name to inventory',
                            )
-    SWIFT_AUTH_TOKEN = os.getenv('SWIFT_AUTH_TOKEN', None)
-    argparser.add_argument('--auth_token', '-t',
-                           help='swift auth_token `openstack token issue` '
-                           'SWIFT_AUTH_TOKEN',
-                           default=SWIFT_AUTH_TOKEN)
-
     common_args(argparser)
     custom_args(argparser)
 
@@ -108,13 +98,26 @@ if __name__ == "__main__":
 
     common_logging(args)
 
-    # our handler
-    event_handler = DOSHandler(args)
+    # ensure user ran OS source command
+    OS_REGION_NAME = os.environ.get('OS_REGION_NAME', None)
+    OS_TENANT_ID = os.environ.get('OS_TENANT_ID', None)
+    OS_PASSWORD = os.environ.get('OS_PASSWORD', None)
+    OS_AUTH_URL = os.environ.get('OS_AUTH_URL', None)
+    OS_USERNAME = os.environ.get('OS_USERNAME', None)
+    OS_TENANT_NAME = os.environ.get('OS_TENANT_NAME', None)
+    assert OS_REGION_NAME, 'missing envvar OS_REGION_NAME'
+    assert OS_TENANT_ID, 'missing envvar OS_TENANT_ID'
+    assert OS_PASSWORD, 'missing envvar OS_PASSWORD'
+    assert OS_AUTH_URL, 'missing envvar OS_AUTH_URL'
+    assert OS_USERNAME, 'missing envvar OS_USERNAME'
+    assert OS_TENANT_NAME, 'missing envvar OS_TENANT_NAME'
 
     # get connection
-    swift = swiftclient.Connection(preauthurl=args.endpoint_url,
-                                   preauthtoken=args.auth_token,
-                                   auth_version="2.0")
+    swift = swiftclient.Connection(authurl=OS_AUTH_URL,
+                                   user=OS_USERNAME,
+                                   key=OS_PASSWORD,
+                                   tenant_name=OS_TENANT_NAME,
+                                   auth_version='2')
 
     # do we have a saved offset?
     offset = get_offset()
@@ -125,12 +128,20 @@ if __name__ == "__main__":
     (container, objects) = swift.get_container(args.bucket_name,
                                                marker=last_name,
                                                full_listing=True)
+    # set token in args
+    args.api_key = swift.token
+
+    # our handler
+    event_handler = DOSHandler(args)
 
     # iterate through objects
     for obj in objects:
         # need a separate call to get meta :-(
         headers = swift.head_object(container=args.bucket_name,
                                     obj=obj['name'])
-        metadata = [{k: headers[k]} for k in headers if k.startswith('x-object-meta-')]  # noqa
-        event_handler.on_any_event(args.endpoint_url, None,
+        metadata = {}
+        for k in headers:
+            if k.startswith('x-object-meta-'):
+                metadata[k] = headers[k]
+        event_handler.on_any_event(swift.url, None,
                                    args.bucket_name, obj, metadata)
