@@ -30,7 +30,12 @@ This project provides two high level capabilities:
 
 ### customizations
 
-The server and client both leverage `plugin duck-typing`
+The data-object-schema is 'unopinionated' in several areas:
+* authentication and authorization is unspecified.
+* no specific backend is specified.
+* 'system-of-record' for id, if unspecified, is driven by the client.
+
+dos_connect addresses these on the server and client by utilizing `plugin duck-typing`
 
 Server plugins:
 * `BACKEND`: for storage. Implementations:  [in-memory](https://github.com/ohsu-comp-bio/dos_connect/blob/master/dos_connect/server/memory_backend.py) and [elasticsearch](https://github.com/ohsu-comp-bio/dos_connect/blob/master/dos_connect/server/elasticsearch_backend.py).  e.g. BACKEND=dos_connect.server.elastic_backend
@@ -70,3 +75,10 @@ see [here](dos_connect/server/README.md)
 ![image](https://user-images.githubusercontent.com/47808/35757585-9e3afd90-0824-11e8-953a-7277104f734c.png)
 
 * see kafak topic 'dos-events' for stream
+
+
+### next steps
+
+* testing
+* evangelization
+* swagger improvements (403, 401 status codes)
