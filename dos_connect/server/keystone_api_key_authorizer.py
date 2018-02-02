@@ -62,8 +62,9 @@ def authorization_check(f, *args, **kwargs):
     '''wrap functions for authorization'''
     auth = flask.request.headers.get('Api-Key', None)
     if not auth:
-    	auth = flask.request.headers.get('X-API-Key', None)
-    log.error('authorization_check auth {}'.format(auth))
+        auth = flask.request.headers.get('X-API-Key', None)
+    if not auth:
+        log.error('authorization_check auth {}'.format(auth))
     if not auth or not _check_auth(auth):
         return _authenticate()
     return f(*args, **kwargs)
