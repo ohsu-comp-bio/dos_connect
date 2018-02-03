@@ -79,7 +79,7 @@ see [here](dos_connect/server/README.md)
   ```
   {'method': method, 'doc': doc}
   ```
-  where 'doc' is a [data_object](https://github.com/ga4gh/data-object-schemas/blob/master/proto/data_objects.proto)  and method is one of ['CREATE', 'UPDATE', 'DELETE']
+  where `doc` is a [data_object](https://github.com/ga4gh/data-object-schemas/blob/master/proto/data_objects.proto)  and `method` is one of ['CREATE', 'UPDATE', 'DELETE']
 
 
 ### next steps
