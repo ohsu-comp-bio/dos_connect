@@ -21,10 +21,10 @@ Exercise the [GA4GH data-object-schemas]( https://github.com/ga4gh/data-object-s
 ### capabilities
 
 This project provides two high level capabilities:
-* observation: long lived services to observe the object store and populate a kafka topic with [data-object-schema](https://github.com/ga4gh/data-object-schemas/blob/master/proto/data_objects.proto) records. These observations catch add, moves and deletes to the object store.
-* inventory: on demand commands to capture a snapshot of the object store.  Inventory commands populate the same queue
+* observation: long lived services to observe the object store and populate a webserver with [data-object-schema](https://github.com/ga4gh/data-object-schemas/blob/master/proto/data_objects.proto) records. These observations catch add, moves and deletes to the object store.  
+* inventory: on demand commands to capture a snapshot of the object store using data-object-schema records.
 
-![image](https://user-images.githubusercontent.com/47808/35756499-80141c06-0820-11e8-847f-a24dd160642e.png)
+![image](https://user-images.githubusercontent.com/47808/35762675-ce8720c0-084f-11e8-8b54-40881df595bd.png)
 
 
 
@@ -45,7 +45,6 @@ Server plugins:
 * `REPLICATOR`: for downstream consumers.
 [noop](https://github.com/ohsu-comp-bio/dos_connect/blob/master/dos_connect/server/noop_replicator.py), [keystone](https://github.com/ohsu-comp-bio/dos_connect/blob/master/dos_connect/server/kafka_replicator.py)
  e.g. REPLICATOR=dos_connect.server.kafka_replicator
-
 
 Client plugins:
 
@@ -75,6 +74,12 @@ see [here](dos_connect/server/README.md)
 ![image](https://user-images.githubusercontent.com/47808/35757585-9e3afd90-0824-11e8-953a-7277104f734c.png)
 
 * see kafak topic 'dos-events' for stream
+
+* the kafka queue is populated with
+  ```
+  {'method': method, 'doc': doc}
+  ```
+  where 'doc' is a [data_object](https://github.com/ga4gh/data-object-schemas/blob/master/proto/data_objects.proto)  and method is one of ['CREATE', 'UPDATE', 'DELETE']
 
 
 ### next steps
