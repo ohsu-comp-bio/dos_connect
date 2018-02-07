@@ -16,7 +16,7 @@ services:
     environment:
       - OBSERVER_PARMS=
       - DOS_SERVER=${DOS_SERVER}
-      - BUCKET_NAME=biostream
+      - BUCKET_NAME=${BUCKET_NAME}
       - SLEEP=${SLEEP}
       - OS_REGION_NAME=${OS_REGION_NAME}
       - OS_TENANT_ID=${OS_TENANT_ID}
