@@ -23,6 +23,7 @@ save = getattr(backend, 'save')
 update = getattr(backend, 'update')
 delete = getattr(backend, 'delete')
 search = getattr(backend, 'search')
+metrics = getattr(backend, 'metrics')
 
 # from replicator import replicate
 replicator_name = os.getenv('REPLICATOR', 'dos_connect.server.noop_replicator')
@@ -242,7 +243,7 @@ def DeleteDataBundle(**kwargs):
     """
     properties = AttributeDict({'id': kwargs['data_bundle_id']})
     delete(properties, 'data_bundles')
-    replicate(data_bundle, 'DELETE')
+    replicate(properties, 'DELETE')
     return(kwargs, 200)
 
 

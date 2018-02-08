@@ -9,6 +9,9 @@ import argparse
 import sys
 from OpenSSL import SSL
 
+from prometheus_client import generate_latest, Gauge
+
+
 import ga4gh.dos
 # These are imported by name by connexion so we assert it here.
 from controllers import *  # noqa
@@ -31,6 +34,23 @@ def configure_app():
 def main(args):
     """ configure """
     app = configure_app()
+
+    # create gauges
+    gauges = {}
+    for metric in metrics():
+        g = Gauge('dos_connect_{}_count'.format(metric.name),
+                  'Number of {}'.format(metric.name))
+        g.set(metric.count)
+        gauges[metric.name] = g
+
+    # metrics
+    @app.route('/metrics')
+    def metrics_endpoint():
+        for metric in metrics():
+            g = gauges[metric.name]
+            g.set(metric.count)
+        return generate_latest()
+
     if args.key_file:
         context = (args.certificate_file, args.key_file)
         app.run(port=args.port, ssl_context=context)

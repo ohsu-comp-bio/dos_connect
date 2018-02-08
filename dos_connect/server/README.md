@@ -108,10 +108,10 @@ sudo \
 
 ### server
 ```
-# user.htpasswd needs to exist in default dir
+# defaults to localhost:9200, set ELASTIC_URL=<url> to override
 sudo \  
   BACKEND=dos_connect.server.elasticsearch_backend  ES_REFRESH_ON_PERSIST=true \
-  python -dos_connect.server.app \
+  python -m dos_connect.server.app \
     -K $(pwd)/certs/certificate.key \
     -C $(pwd)/certs/certificate.pem  \
     -P 443
@@ -127,3 +127,86 @@ sudo \
    --dos_server https://localhost \
    $AWS_TEST_BUCKET
 ```
+
+### ES index Setup
+
+curl -XPUT "http://elasticsearch:9200/data_objects/_mapping/data_object" -H 'Content-Type: application/json' -d'
+{"properties": {
+          "checksums": {
+            "properties": {
+              "checksum": {
+                "type": "text",
+                "fields": {
+                  "keyword": {
+                    "type": "keyword",
+                    "ignore_above": 256
+                  }
+                }
+              },
+              "type": {
+                "type": "text",
+                "fields": {
+                  "keyword": {
+                    "type": "keyword",
+                    "ignore_above": 256
+                  }
+                }
+              }
+            }
+          },
+          "created": {
+            "type": "date"
+          },
+          "id": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "name": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "size": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "updated": {
+            "type": "date"
+          },
+          "urls": {
+            "properties": {
+              "url": {
+                "type": "text",
+                "fields": {
+                  "keyword": {
+                    "type": "keyword",
+                    "ignore_above": 256
+                  }
+                }
+              }
+            }
+          },
+          "version": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          }
+        }}'

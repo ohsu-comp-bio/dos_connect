@@ -3,15 +3,16 @@ import logging
 import sys
 import os
 import uuid
+import requests
 
 # setup connection, models and security
 from bravado.requests_client import RequestsClient
 from dos_connect.client.dos_client import Client
-
+SERVER_URL = 'http://localhost:8080/'
 http_client = RequestsClient()
 # http_client.set_basic_auth('localhost', 'admin', 'secret')
 # http_client.set_api_key('localhost', 'XXX-YYY-ZZZ', param_in='header')
-local_client = Client('http://localhost:8080/', http_client=http_client)
+local_client = Client(SERVER_URL, http_client=http_client)
 client = local_client.client
 models = local_client.models
 
@@ -41,8 +42,6 @@ def test_client_driven_id():
     create_response = client.CreateDataObject(body=create_request).result()
     data_object_id = create_response['data_object_id']
     assert data_object_id == id,  "expected server to use client's id"
-
-
 
 
 def test_duplicate_checksums():
@@ -460,3 +459,15 @@ def test_data_bundles():
     alias_list_response = client.ListDataBundles(body=list_request).result()
     print(list_response.data_bundles[0].aliases[0])
     print(alias_list_response.data_bundles[0].aliases[0])
+
+
+def test_metrics():
+    print("..........OHSU metrics..............")
+    r = requests.get(SERVER_URL + 'metrics')
+    assert r.status_code == 200, '/metrics should return 200'
+    assert 'text/html' in r.headers['content-type'], \
+        'content-type should be text/html'
+    assert 'dos_connect_data_bundles_count' in r.text, \
+        'should return dos_connect_data_bundles_count'
+    assert 'dos_connect_data_objects_count' in r.text, \
+        'should return dos_connect_data_objects_count'

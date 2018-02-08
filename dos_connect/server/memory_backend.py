@@ -133,3 +133,14 @@ def delete(properties, index='data_objects'):
             indexes.append(i)
     for i in sorted(indexes, reverse=True):
         del store[index][i]
+
+
+def metrics(indexes=['data_objects', 'data_bundle']):
+    """
+    return document counts
+    """
+    return [
+        AttributeDict(
+            {'name': index, 'count': len(store.get(index, []))}
+            ) for index in indexes
+        ]
