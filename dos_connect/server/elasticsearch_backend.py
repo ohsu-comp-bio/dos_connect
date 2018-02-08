@@ -11,7 +11,7 @@ import uuid
 
 from elasticsearch import Elasticsearch
 from elasticsearch_dsl import Search, Q
-
+import elasticsearch
 from utils import AttributeDict, now, add_created_timestamps, \
                   add_updated_timestamps
 
@@ -136,10 +136,13 @@ def metrics(indexes=['data_objects', 'data_bundles']):
         try:
             s = Search(using=client, index=index, doc_type=index[:-1])
             return s.count()
+        except elasticsearch.exceptions.NotFoundError as no_found:
+            log.info('NotFoundError {} (expected on empty db)'.format(index))
+            return 0
         except Exception as e:
             log.error('error getting count of documents in {}'.format(index))
             log.exception(e)
-            return 0
+            raise e
     return [
         AttributeDict(
             {'name': index, 'count': _count(index)}
