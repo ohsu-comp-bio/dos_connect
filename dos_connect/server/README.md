@@ -108,10 +108,10 @@ sudo \
 
 ### server
 ```
-# user.htpasswd needs to exist in default dir
+# defaults to localhost:9200, set ELASTIC_URL=<url> to override
 sudo \  
   BACKEND=dos_connect.server.elasticsearch_backend  ES_REFRESH_ON_PERSIST=true \
-  python -dos_connect.server.app \
+  python -m dos_connect.server.app \
     -K $(pwd)/certs/certificate.key \
     -C $(pwd)/certs/certificate.pem  \
     -P 443
