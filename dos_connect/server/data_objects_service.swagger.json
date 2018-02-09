@@ -29,6 +29,15 @@
             "schema": {
               "$ref": "#/definitions/ga4ghCreateDataBundleResponse"
             }
+          },
+          "401": {
+            "description": "Authorization information is missing or invalid."
+          },
+          "404": {
+            "description": "Not found."
+          },
+          "500": {
+            "description": "Unexpected error."
           }
         },
         "parameters": [
@@ -57,6 +66,15 @@
             "schema": {
               "$ref": "#/definitions/ga4ghListDataBundlesResponse"
             }
+          },
+          "401": {
+            "description": "Authorization information is missing or invalid."
+          },
+          "404": {
+            "description": "Not found."
+          },
+          "500": {
+            "description": "Unexpected error."
           }
         },
         "parameters": [
@@ -85,6 +103,15 @@
             "schema": {
               "$ref": "#/definitions/ga4ghGetDataBundleResponse"
             }
+          },
+          "401": {
+            "description": "Authorization information is missing or invalid."
+          },
+          "404": {
+            "description": "Not found."
+          },
+          "500": {
+            "description": "Unexpected error."
           }
         },
         "parameters": [
@@ -116,6 +143,15 @@
             "schema": {
               "$ref": "#/definitions/ga4ghDeleteDataBundleResponse"
             }
+          },
+          "401": {
+            "description": "Authorization information is missing or invalid."
+          },
+          "404": {
+            "description": "Not found."
+          },
+          "500": {
+            "description": "Unexpected error."
           }
         },
         "parameters": [
@@ -140,6 +176,15 @@
             "schema": {
               "$ref": "#/definitions/ga4ghUpdateDataBundleResponse"
             }
+          },
+          "401": {
+            "description": "Authorization information is missing or invalid."
+          },
+          "404": {
+            "description": "Not found."
+          },
+          "500": {
+            "description": "Unexpected error."
           }
         },
         "parameters": [
@@ -173,6 +218,15 @@
             "schema": {
               "$ref": "#/definitions/ga4ghGetDataBundleVersionsResponse"
             }
+          },
+          "401": {
+            "description": "Authorization information is missing or invalid."
+          },
+          "404": {
+            "description": "Not found."
+          },
+          "500": {
+            "description": "Unexpected error."
           }
         },
         "parameters": [
@@ -199,6 +253,15 @@
             "schema": {
               "$ref": "#/definitions/ga4ghCreateDataObjectResponse"
             }
+          },
+          "401": {
+            "description": "Authorization information is missing or invalid."
+          },
+          "404": {
+            "description": "Not found."
+          },
+          "500": {
+            "description": "Unexpected error."
           }
         },
         "parameters": [
@@ -227,6 +290,15 @@
             "schema": {
               "$ref": "#/definitions/ga4ghListDataObjectsResponse"
             }
+          },
+          "401": {
+            "description": "Authorization information is missing or invalid."
+          },
+          "404": {
+            "description": "Not found."
+          },
+          "500": {
+            "description": "Unexpected error."
           }
         },
         "parameters": [
@@ -255,6 +327,15 @@
             "schema": {
               "$ref": "#/definitions/ga4ghGetDataObjectResponse"
             }
+          },
+          "401": {
+            "description": "Authorization information is missing or invalid."
+          },
+          "404": {
+            "description": "Not found."
+          },
+          "500": {
+            "description": "Unexpected error."
           }
         },
         "parameters": [
@@ -286,6 +367,15 @@
             "schema": {
               "$ref": "#/definitions/ga4ghDeleteDataObjectResponse"
             }
+          },
+          "401": {
+            "description": "Authorization information is missing or invalid."
+          },
+          "404": {
+            "description": "Not found."
+          },
+          "500": {
+            "description": "Unexpected error."
           }
         },
         "parameters": [
@@ -310,6 +400,15 @@
             "schema": {
               "$ref": "#/definitions/ga4ghUpdateDataObjectResponse"
             }
+          },
+          "401": {
+            "description": "Authorization information is missing or invalid."
+          },
+          "404": {
+            "description": "Not found."
+          },
+          "500": {
+            "description": "Unexpected error."
           }
         },
         "parameters": [
@@ -343,6 +442,15 @@
             "schema": {
               "$ref": "#/definitions/ga4ghGetDataObjectVersionsResponse"
             }
+          },
+          "401": {
+            "description": "Authorization information is missing or invalid."
+          },
+          "404": {
+            "description": "Not found."
+          },
+          "500": {
+            "description": "Unexpected error."
           }
         },
         "parameters": [
