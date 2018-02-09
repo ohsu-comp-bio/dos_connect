@@ -135,7 +135,7 @@ def delete(properties, index='data_objects'):
         del store[index][i]
 
 
-def metrics(indexes=['data_objects', 'data_bundle']):
+def metrics(indexes=['data_objects', 'data_bundles']):
     """
     return document counts
     """
