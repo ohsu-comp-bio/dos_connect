@@ -4,10 +4,13 @@ import sys
 import os
 import uuid
 import requests
+import pytest
 
 # setup connection, models and security
 from bravado.requests_client import RequestsClient
+from bravado.exception import HTTPNotFound
 from dos_connect.client.dos_client import Client
+
 SERVER_URL = 'http://localhost:8080/'
 http_client = RequestsClient()
 # http_client.set_basic_auth('localhost', 'admin', 'secret')
@@ -471,3 +474,13 @@ def test_metrics():
         'should return dos_connect_data_bundles_count'
     assert 'dos_connect_data_objects_count' in r.text, \
         'should return dos_connect_data_objects_count'
+
+
+def test_no_find():
+    # this should raise an expected error
+    with pytest.raises(HTTPNotFound) as e:
+        get_bundle_response = client.GetDataBundle(
+            data_bundle_id='NON-EXISTING-KEY').result()
+        data_bundle = get_bundle_response.data_bundle
+        print(data_bundle)
+        print(data_bundle.id)
