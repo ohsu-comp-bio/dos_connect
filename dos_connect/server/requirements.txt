@@ -9,3 +9,5 @@ kafka-python==1.3.3
 passlib==1.7.1
 # for all authorizers
 decorator==4.0.11
+# for metrics
+prometheus-client==0.1.1

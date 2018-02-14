@@ -6,6 +6,7 @@ import uuid
 import requests
 import pytest
 
+
 from . import init_logging, init_client
 
 # setup connection, models and security
@@ -14,6 +15,7 @@ from bravado.exception import HTTPConflict
 # setup logging
 init_logging()
 local_client = init_client()
+ 
 client = local_client.client
 models = local_client.models
 
@@ -447,6 +449,7 @@ def test_data_bundles():
     print(alias_list_response.data_bundles[0].aliases[0])
 
 
+ 
 def test_no_find():
     # this should raise an expected error
     with pytest.raises(HTTPNotFound) as e:

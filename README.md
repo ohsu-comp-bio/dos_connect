@@ -64,6 +64,45 @@ AWS S3 returns a special hash for [multipart files](https://forums.aws.amazon.co
 ### setup
 see [here](dos_connect/server/README.md)
 
+#### server
+Setup: .env file
+
+```
+# ******* webserver
+# http port
+DOS_CONNECT_WEBSERVER_PORT=<port-number>
+# configure backend
+BACKEND=dos_connect.server.elastic_backend
+ELASTIC_URL=<url>
+# configure authorizer
+AUTHORIZER=dos_connect.server.keystone_api_key_authorizer
+# (/v3)
+DOS_SERVER_OS_AUTH_URL=<url>
+AUTHORIZER_PROJECTS=<project_name>
+# replicator
+REPLICATOR=dos_connect.server.kafka_replicator
+KAFKA_BOOTSTRAP_SERVERS=<url>
+KAFKA_DOS_TOPIC=<topic-name>
+```
+
+Server Startup:
+```
+$ alias web='docker-compose -f docker-compose-webserver.yml'
+$ web build ; web up -d
+```
+
+Client Startup:
+**note:** execute `source <openstack-openrc.sh>` first
+```
+# webserver endpoint
+export DOS_SERVER=<url>
+# sleep in between inventory runs
+export SLEEP=<seconds-to-sleep>
+# bucket to monitor
+export BUCKET_NAME=<existing-bucket-name>
+$ alias client='docker-compose -f docker-compose-swift.yml'
+$ client build; client up -d
+```
 
 ### ohsu implementation:
 
