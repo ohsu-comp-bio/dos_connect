@@ -51,7 +51,11 @@ def CreateDataObject(**kwargs):
     body = AttributeDict(kwargs['body']['data_object'])
     doc = add_created_timestamps(body)
     doc.current = True
-    doc = save(doc, 'data_objects')
+    try:
+        doc = save(doc, 'data_objects')
+    except Exception as e:
+        log.exception(e)
+        return({"data_object_id": doc.id}, 409)
     replicate(doc, 'CREATE')
     return({"data_object_id": doc.id}, 200)
 
@@ -166,7 +170,11 @@ def CreateDataBundle(**kwargs):
     body = AttributeDict(kwargs['body']['data_bundle'])
     doc = add_created_timestamps(body)
     doc.current = True
-    doc = save(doc, 'data_bundles')
+    try:
+        doc = save(doc, 'data_bundles')
+    except Exception as e:
+        log.exception(e)
+        return({"data_object_id": doc.id}, 409)
     replicate(doc, 'CREATE')
     return({"data_bundle_id": doc.id}, 200)
 

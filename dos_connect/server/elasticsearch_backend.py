@@ -45,6 +45,9 @@ def save(doc, index='data_objects'):
     if not doc.get('id', None):
         temp_id = str(uuid.uuid4())
         doc['id'] = temp_id
+
+    if _is_duplicate(doc, index):
+        raise Exception("duplicate document")
     # create index, use index name singular as doc type
     # do not wait for search available See
     # https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-refresh.html
@@ -57,6 +60,32 @@ def save(doc, index='data_objects'):
                           refresh=ES_REFRESH_ON_PERSIST
                           )
     return doc
+
+
+def _is_duplicate(new_doc, index='data_objects'):
+    """ check if already stored.
+        True if new_doc has same checksums and urls,
+            and optionally id and aliases
+    """
+    # by default search for everything
+    s = Search(using=client, index=index)
+    clauses = ['*']
+    # make seach parameters ES friendly
+    if 'id' in new_doc:
+        clauses.append('+{}:"{}"'.format('id', new_doc.id))
+    if 'aliases' in new_doc:
+        for alias in new_doc.aliases:
+            clauses.append('+{}:"{}"'.format('aliases', alias))
+    if 'checksums' in new_doc:
+        for checksum in new_doc.checksums:
+            clauses.append('+{}:"{}"'.format('checksums.checksum',
+                                             checksum['checksum']))
+    if 'urls' in new_doc:
+        for url in new_doc.urls:
+            clauses.append('+{}:"{}"'.format('urls.url', url['url']))
+    # execute query return True if a hit
+    s = s.query("query_string", query=' '.join(clauses))
+    return s.count() > 0
 
 
 def update(_id, doc, index='data_objects'):

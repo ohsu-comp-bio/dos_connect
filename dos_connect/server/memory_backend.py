@@ -31,6 +31,9 @@ def save(doc, index='data_objects'):
         temp_id = str(uuid.uuid4())
         doc['id'] = temp_id
 
+    if _is_duplicate(doc, index):
+        raise Exception("duplicate document")
+
     if index not in store:
         store[index] = []
     doc.meta = AttributeDict({'id': doc.id})
@@ -39,8 +42,27 @@ def save(doc, index='data_objects'):
     return doc
 
 
+def _is_duplicate(new_doc, index='data_objects'):
+    """ check if already stored.
+        True if new_doc has same checksums and urls,
+            and optionally id and aliases
+    """
+    t = True
+    f = False
+    n = None
+    if index not in store:
+        return False
+    for doc in store[index]:
+        if new_doc.get('id', n) == doc.get('id', n):
+            if new_doc.get('aliases', n) == doc.get('aliases', n):
+                if new_doc.get('checksums', t) == doc.get('checksums', f):
+                    if new_doc.get('urls', t) == doc.get('urls', f):
+                        return True
+    return False
+
+
 def _get(_id, current=None, index='data_objects'):
-    """ get by id """
+    """ get by id, optionally current """
     for doc in store[index]:
         if doc.id == _id:
             if current:

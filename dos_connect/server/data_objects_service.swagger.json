@@ -36,6 +36,9 @@
           "404": {
             "description": "Not found."
           },
+          "409": {
+            "description": "Conflict, object exists already."
+          },
           "500": {
             "description": "Unexpected error."
           }
@@ -259,6 +262,9 @@
           },
           "404": {
             "description": "Not found."
+          },
+          "409": {
+            "description": "Conflict, object exists already."
           },
           "500": {
             "description": "Unexpected error."
