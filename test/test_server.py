@@ -3,22 +3,19 @@ import logging
 import sys
 import os
 import uuid
+import requests
+import pytest
+
+from . import init_logging, init_client
 
 # setup connection, models and security
-from bravado.requests_client import RequestsClient
-from dos_connect.client.dos_client import Client
-
-http_client = RequestsClient()
-# http_client.set_basic_auth('localhost', 'admin', 'secret')
-# http_client.set_api_key('localhost', 'XXX-YYY-ZZZ', param_in='header')
-local_client = Client('http://localhost:8080/', http_client=http_client)
+from bravado.exception import HTTPNotFound
+from bravado.exception import HTTPConflict
+# setup logging
+init_logging()
+local_client = init_client()
 client = local_client.client
 models = local_client.models
-
-# setup logging
-root = logging.getLogger()
-root.setLevel(logging.ERROR)
-logging.captureWarnings(True)
 
 
 def test_client_driven_id():
@@ -41,8 +38,6 @@ def test_client_driven_id():
     create_response = client.CreateDataObject(body=create_request).result()
     data_object_id = create_response['data_object_id']
     assert data_object_id == id,  "expected server to use client's id"
-
-
 
 
 def test_duplicate_checksums():
@@ -256,17 +251,7 @@ def test_data_objects():
         data_object_id=data_object_id).result().data_object
     print(data_object.version)
 
-    # Create a Data Object specifying your own ID
-    print("..........Create a Data Object with our own ID..............")
-    my_data_object = DataObject(
-        id="myid",
-        file_name="abc",
-        checksums=[Checksum(checksum="def", type="md5")],
-        urls=[URL(url="a"), URL(url="b")])
-    create_request = CreateDataObjectRequest(data_object=my_data_object)
-    create_response = client.CreateDataObject(body=create_request).result()
-    data_object_id = create_response['data_object_id']
-    print(data_object_id)
+    # Create a Data Object specifying your own ID see test_client_driven_id
 
     # Page through a listing of data objects
     print("..........Page through a listing of Objects..............")
@@ -460,3 +445,46 @@ def test_data_bundles():
     alias_list_response = client.ListDataBundles(body=list_request).result()
     print(list_response.data_bundles[0].aliases[0])
     print(alias_list_response.data_bundles[0].aliases[0])
+
+
+def test_no_find():
+    # this should raise an expected error
+    with pytest.raises(HTTPNotFound) as e:
+        get_bundle_response = client.GetDataBundle(
+            data_bundle_id='NON-EXISTING-KEY').result()
+        data_bundle = get_bundle_response.data_bundle
+        print(data_bundle)
+        print(data_bundle.id)
+
+
+def test_duplicate_create():
+    """ validate server uses client's id """
+    Checksum = models.get_model('ga4ghChecksum')
+    URL = models.get_model('ga4ghURL')
+    CreateDataObjectRequest = models.get_model('ga4ghCreateDataObjectRequest')
+    DataObject = models.get_model('ga4ghCreateDataObjectRequest')
+    checksum = str(uuid.uuid1())
+    id = str(uuid.uuid1())
+    # print("..........Create an object............")
+    create_data_object = DataObject(
+        id=id,
+        name="abc",
+        size=12345,
+        checksums=[Checksum(checksum=checksum, type="md5")],
+        urls=[URL(url="a"), URL(url="b")])
+    create_request = CreateDataObjectRequest(data_object=create_data_object)
+    create_response = client.CreateDataObject(body=create_request).result()
+    data_object_id = create_response['data_object_id']
+    assert data_object_id == id,  "expected server to use client's id"
+
+    # print("..........Create again............")
+    with pytest.raises(HTTPConflict) as e:
+        create_data_object = DataObject(
+            id=id,
+            name="abc",
+            size=12345,
+            checksums=[Checksum(checksum=checksum, type="md5")],
+            urls=[URL(url="a"), URL(url="b")])
+        create_request = CreateDataObjectRequest(
+                        data_object=create_data_object)
+        create_response = client.CreateDataObject(body=create_request).result()

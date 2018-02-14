@@ -23,6 +23,7 @@ save = getattr(backend, 'save')
 update = getattr(backend, 'update')
 delete = getattr(backend, 'delete')
 search = getattr(backend, 'search')
+metrics = getattr(backend, 'metrics')
 
 # from replicator import replicate
 replicator_name = os.getenv('REPLICATOR', 'dos_connect.server.noop_replicator')
@@ -50,7 +51,11 @@ def CreateDataObject(**kwargs):
     body = AttributeDict(kwargs['body']['data_object'])
     doc = add_created_timestamps(body)
     doc.current = True
-    doc = save(doc, 'data_objects')
+    try:
+        doc = save(doc, 'data_objects')
+    except Exception as e:
+        log.exception(e)
+        return({"data_object_id": doc.id}, 409)
     replicate(doc, 'CREATE')
     return({"data_object_id": doc.id}, 200)
 
@@ -165,7 +170,11 @@ def CreateDataBundle(**kwargs):
     body = AttributeDict(kwargs['body']['data_bundle'])
     doc = add_created_timestamps(body)
     doc.current = True
-    doc = save(doc, 'data_bundles')
+    try:
+        doc = save(doc, 'data_bundles')
+    except Exception as e:
+        log.exception(e)
+        return({"data_object_id": doc.id}, 409)
     replicate(doc, 'CREATE')
     return({"data_bundle_id": doc.id}, 200)
 
@@ -242,7 +251,7 @@ def DeleteDataBundle(**kwargs):
     """
     properties = AttributeDict({'id': kwargs['data_bundle_id']})
     delete(properties, 'data_bundles')
-    replicate(data_bundle, 'DELETE')
+    replicate(properties, 'DELETE')
     return(kwargs, 200)
 
 
