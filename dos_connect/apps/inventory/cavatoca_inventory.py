@@ -39,10 +39,6 @@ class CavatacaGenerator():
                 return item.get('class', None) == 'File'
             return False
 
-        def _to_file(item):
-            # print self._files_by_origin.get(item['path'], None)
-            return self._files_by_origin.get(item['path'], item)
-
         for output_key in getattr(task, 'outputs', None) or []:
             # print '    output_name:{}'.format(output_name)
             output_value = task.outputs.get(output_key)
@@ -51,11 +47,11 @@ class CavatacaGenerator():
                 for item in output_value:
                     # print '      item:{} {}'.format(item.__class__, item)
                     if _is_file(item):
-                        yield _to_file(item), output_key
+                        yield item, output_key
             else:
                 # print '      output_value:{} {}'.format(output_value.__class__, output_value)  # NOQA
                 if _is_file(output_value):
-                    yield _to_file(output_value), output_key
+                    yield output_value, output_key
 
     def all_output_files(self):
         ''' generator cavataca project.task.outputs()
