@@ -61,14 +61,6 @@ class CavatacaGenerator():
             for (output_file, output_key) in self.output_files(task=task):
                 yield output_file, output_key, task, self.project
 
-    def all_task_files(self):
-        ''' generator cavataca project.task.outputs()
-            returns tuple (output_value, output_key, task, project )'''
-        for task in self.tasks():
-            print 'task:{}'.format(task.id)
-            for output_file in self._files_by_origin.get(task.id, []):
-                yield output_file, task, self.project
-
     def files(self):
         ''' generator cavataca project.files() '''
         for f in self.api.files.query(project=self.project_id):
@@ -144,6 +136,9 @@ def load_cavataca(project_id, token, url):
     generator = CavatacaGenerator(project_id=project_id, token=token, url=url)
     for file_ in generator.files():
         post_cavataca(file_)
+    # for tuple_ in generator.all_output_files():
+    #     print tuple_[0]
+    #     break
 
 
 if __name__ == '__main__':
