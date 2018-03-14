@@ -11,6 +11,7 @@ from OpenSSL import SSL
 
 from prometheus_client import generate_latest, Gauge
 
+from flask import redirect
 
 import ga4gh.dos
 # These are imported by name by connexion so we assert it here.
@@ -50,6 +51,10 @@ def main(args):
             g = gauges[metric.name]
             g.set(metric.count)
         return generate_latest()
+
+    @app.route("/")
+    def to_ui():
+        return redirect("/ui", code=302)
 
     if args.key_file:
         context = (args.certificate_file, args.key_file)
