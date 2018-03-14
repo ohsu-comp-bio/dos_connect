@@ -27,8 +27,10 @@ def configure_app():
         __name__,
         swagger_ui=True,
         swagger_json=True)
-    app.add_api('data_objects_service.swagger.json')
+    app.add_api('data_object_service.swagger.yaml')
     CORS(app.app)
+    for rule in app.app.url_map.iter_rules():
+        print rule.rule
     return app
 
 
@@ -54,7 +56,7 @@ def main(args):
 
     @app.route("/")
     def to_ui():
-        return redirect("/ui", code=302)
+        return redirect("/ga4gh/dos/v1/ui", code=302)
 
     if args.key_file:
         context = (args.certificate_file, args.key_file)

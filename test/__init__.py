@@ -10,7 +10,7 @@ Provides
 import logging
 from bravado.requests_client import RequestsClient
 from dos_connect.client.dos_client import Client
-SERVER_URL = 'http://localhost:8080/'
+SERVER_URL = 'http://localhost:8080/ga4gh/dos/v1'
 
 
 def init_logging():

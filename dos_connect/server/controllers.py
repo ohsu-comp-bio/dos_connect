@@ -55,7 +55,7 @@ def CreateDataObject(**kwargs):
         doc = save(doc, 'data_objects')
     except Exception as e:
         log.exception(e)
-        return({"data_object_id": doc.id}, 409)
+        return({'msg': e.message, 'status_code': 400}, 400)
     replicate(doc, 'CREATE')
     return({"data_object_id": doc.id}, 200)
 
@@ -76,7 +76,8 @@ def GetDataObject(**kwargs):
             return({"data_object": data_object.to_dict()}, 200)
     except Exception as e:
         log.exception(e)
-    return("No Content", 404)
+    return({'msg': "The requested Data "
+                   "Object wasn't found", 'status_code': 404}, 404)
 
 
 @authorization_check
@@ -92,7 +93,8 @@ def GetDataObjectVersions(**kwargs):
             return({"data_objects": versions}, 200)
     except Exception as e:
         log.exception(e)
-        return("No Content", 404)
+    return({'msg': "The requested Data "
+                   "Object wasn't found", 'status_code': 404}, 404)
 
 
 @authorization_check
@@ -124,7 +126,8 @@ def UpdateDataObject(**kwargs):
         return({"data_object_id": properties.id}, 200)
     except Exception as e:
         log.exception(e)
-        return("No Content", 404)
+    return({'msg': "The requested Data "
+                   "Object wasn't found", 'status_code': 404}, 404)
 
 
 @authorization_check
@@ -195,7 +198,8 @@ def GetDataBundle(**kwargs):
             return({"data_bundle": data_bundle.to_dict()}, 200)
     except Exception as e:
         log.exception(e)
-    return("No Content", 404)
+    return({'msg': "The requested Data "
+                   "Object wasn't found", 'status_code': 404}, 404)
 
 
 @authorization_check
@@ -225,7 +229,8 @@ def UpdateDataBundle(**kwargs):
         return({"data_bundle_id": properties.id}, 200)
     except Exception as e:
         log.exception(e)
-        return("No Content", 404)
+    return({'msg': "The requested Data "
+                   "Object wasn't found", 'status_code': 404}, 404)
 
 
 @authorization_check
@@ -241,7 +246,8 @@ def GetDataBundleVersions(**kwargs):
             return({"data_bundles": versions}, 200)
     except Exception as e:
         log.exception(e)
-        return("No Content", 404)
+    return({'msg': "The requested Data "
+                   "Object wasn't found", 'status_code': 404}, 404)
 
 
 @authorization_check

@@ -12,31 +12,45 @@ from . import init_logging, init_client
 # setup connection, models and security
 from bravado.exception import HTTPNotFound
 from bravado.exception import HTTPConflict
+from bravado.exception import HTTPBadRequest
 # setup logging
 init_logging()
 local_client = init_client()
- 
+
 client = local_client.client
 models = local_client.models
+
+# print models
+# print models.swagger_spec.definitions.keys()
+# for model_name in models.swagger_spec.definitions.keys():
+#     print model_name
+# # print dir(models)
+# print dir(models.DataObjectService)
+# # print dir(models.DataObjectService.CreateDataObject)
+# # CreateDataObjectRequest = models.get_model('CreateDataObjectRequest')
+# # print dir(CreateDataObjectRequest)
+# # CreateDataObjectRequest = models.get_model('CreateDataObjectRequest')
+# # print dir(CreateDataObjectRequest)
 
 
 def test_client_driven_id():
     """ validate server uses client's id """
-    Checksum = models.get_model('ga4ghChecksum')
-    URL = models.get_model('ga4ghURL')
-    CreateDataObjectRequest = models.get_model('ga4ghCreateDataObjectRequest')
-    DataObject = models.get_model('ga4ghCreateDataObjectRequest')
+    Checksum = models.get_model('Checksum')
+    URL = models.get_model('URL')
+    CreateDataObjectRequest = models.get_model('CreateDataObjectRequest')
+    DataObject = models.get_model('CreateDataObjectRequest')
     checksum = str(uuid.uuid1())
     id = str(uuid.uuid1())
     # CreateDataObject
     print("..........Create an object............")
-    create_data_object = DataObject(
+    data_object = DataObject(
         id=id,
         name="abc",
-        size=12345,
+        size="12345",
         checksums=[Checksum(checksum=checksum, type="md5")],
         urls=[URL(url="a"), URL(url="b")])
-    create_request = CreateDataObjectRequest(data_object=create_data_object)
+    print data_object.marshal()
+    create_request = CreateDataObjectRequest(data_object=data_object)
     create_response = client.CreateDataObject(body=create_request).result()
     data_object_id = create_response['data_object_id']
     assert data_object_id == id,  "expected server to use client's id"
@@ -44,16 +58,16 @@ def test_client_driven_id():
 
 def test_duplicate_checksums():
     """ validate expected behavior of multiple creates of same checksum """
-    Checksum = models.get_model('ga4ghChecksum')
-    URL = models.get_model('ga4ghURL')
-    CreateDataObjectRequest = models.get_model('ga4ghCreateDataObjectRequest')
-    DataObject = models.get_model('ga4ghCreateDataObjectRequest')
+    Checksum = models.get_model('Checksum')
+    URL = models.get_model('URL')
+    CreateDataObjectRequest = models.get_model('CreateDataObjectRequest')
+    DataObject = models.get_model('CreateDataObjectRequest')
     checksum = str(uuid.uuid1())
     # CreateDataObject
     print("..........Create an object............")
     create_data_object = DataObject(
         name="abc",
-        size=12345,
+        size="12345",
         checksums=[Checksum(checksum=checksum, type="md5")],
         urls=[URL(url="a"), URL(url="b")])
     create_request = CreateDataObjectRequest(data_object=create_data_object)
@@ -63,7 +77,7 @@ def test_duplicate_checksums():
     print("..........Create a 2nd  object............")
     create_data_object = DataObject(
         name="xyz",
-        size=12345,
+        size="12345",
         checksums=[Checksum(checksum=checksum, type="md5")],
         urls=[URL(url="c")])
     create_request = CreateDataObjectRequest(data_object=create_data_object)
@@ -72,7 +86,7 @@ def test_duplicate_checksums():
     print(data_object_id)
     # ListDataObjects
     print("..........List Data Objects...............")
-    ListDataObjectsRequest = models.get_model('ga4ghListDataObjectsRequest')
+    ListDataObjectsRequest = models.get_model('ListDataObjectsRequest')
     next_page_token = None
     count = 0
     urls = []
@@ -98,15 +112,15 @@ def test_duplicate_checksums():
 
 
 def test_simple():
-    Checksum = models.get_model('ga4ghChecksum')
-    URL = models.get_model('ga4ghURL')
-    CreateDataObjectRequest = models.get_model('ga4ghCreateDataObjectRequest')
-    DataObject = models.get_model('ga4ghCreateDataObjectRequest')
+    Checksum = models.get_model('Checksum')
+    URL = models.get_model('URL')
+    CreateDataObjectRequest = models.get_model('CreateDataObjectRequest')
+    DataObject = models.get_model('CreateDataObjectRequest')
     # CreateDataObject
     print("..........Create an object............")
     create_data_object = DataObject(
         name="abc",
-        size=12345,
+        size="12345",
         checksums=[Checksum(checksum="def", type="md5")],
         urls=[URL(url="a"), URL(url="b")])
     create_request = CreateDataObjectRequest(data_object=create_data_object)
@@ -123,10 +137,10 @@ def test_simple():
 
     # UpdateDataObject
     print("..........Update that object.................")
-    UpdateDataObjectRequest = models.get_model('ga4ghUpdateDataObjectRequest')
+    UpdateDataObjectRequest = models.get_model('UpdateDataObjectRequest')
     update_data_object = DataObject(
         name="abc",
-        size=12345,
+        size="12345",
         checksums=[Checksum(checksum="def", type="md5")],
         urls=[URL(url="a"), URL(url="b"), URL(url="c")])
     update_request = UpdateDataObjectRequest(data_object=update_data_object)
@@ -140,7 +154,7 @@ def test_simple():
     print("..........Create another object w/ same checksum............")
     create_data_object = DataObject(
         name="fubar",
-        size=12345,
+        size="12345",
         checksums=[Checksum(checksum="def", type="md5")],
         urls=[URL(url="foo"), URL(url="bar")])
     create_request = CreateDataObjectRequest(data_object=create_data_object)
@@ -150,7 +164,7 @@ def test_simple():
 
     # ListDataObjects
     print("..........List Data Objects...............")
-    ListDataObjectsRequest = models.get_model('ga4ghListDataObjectsRequest')
+    ListDataObjectsRequest = models.get_model('ListDataObjectsRequest')
     next_page_token = None
     count = 0
     while(True):
@@ -167,15 +181,15 @@ def test_simple():
 
 
 def test_data_objects():
-    Checksum = models.get_model('ga4ghChecksum')
-    URL = models.get_model('ga4ghURL')
-    CreateDataObjectRequest = models.get_model('ga4ghCreateDataObjectRequest')
-    DataObject = models.get_model('ga4ghCreateDataObjectRequest')
+    Checksum = models.get_model('Checksum')
+    URL = models.get_model('URL')
+    CreateDataObjectRequest = models.get_model('CreateDataObjectRequest')
+    DataObject = models.get_model('CreateDataObjectRequest')
     # CreateDataObject
     print("..........Create an object............")
     create_data_object = DataObject(
         name="abc",
-        size=12345,
+        size="12345",
         checksums=[Checksum(checksum="def", type="md5")],
         urls=[URL(url="a"), URL(url="b")])
     create_request = CreateDataObjectRequest(data_object=create_data_object)
@@ -192,10 +206,10 @@ def test_data_objects():
 
     # UpdateDataObject
     print("..........Update that object.................")
-    UpdateDataObjectRequest = models.get_model('ga4ghUpdateDataObjectRequest')
+    UpdateDataObjectRequest = models.get_model('UpdateDataObjectRequest')
     update_data_object = DataObject(
         name="abc",
-        size=12345,
+        size="12345",
         checksums=[Checksum(checksum="def", type="md5")],
         urls=[URL(url="a"), URL(url="b"), URL(url="c")])
     update_request = UpdateDataObjectRequest(data_object=update_data_object)
@@ -215,7 +229,7 @@ def test_data_objects():
 
     # ListDataObjects
     print("..........List Data Objects...............")
-    ListDataObjectsRequest = models.get_model('ga4ghListDataObjectsRequest')
+    ListDataObjectsRequest = models.get_model('ListDataObjectsRequest')
     list_request = ListDataObjectsRequest()
     list_response = client.ListDataObjects(body=list_request).result()
     print(len(list_response.data_objects))
@@ -242,7 +256,7 @@ def test_data_objects():
     print(".......Create a Data Object with our own version..........")
     my_data_object = DataObject(
         name="abc",
-        size=12345,
+        size="12345",
         checksums=[Checksum(checksum="def", type="md5")],
         urls=[URL(url="a"), URL(url="b")],
         version="great-version")
@@ -261,7 +275,7 @@ def test_data_objects():
         my_data_object = DataObject(
             name="OBJ{}".format(i),
             aliases=["OBJ{}".format(i)],
-            size=10 * i,
+            size=str(10 * i),
             checksums=[Checksum(checksum="def{}".format(i), type="md5")],
             urls=[URL(url="http://{}".format(i))])
         create_request = CreateDataObjectRequest(data_object=my_data_object)
@@ -302,18 +316,18 @@ def test_data_objects():
 
 
 def test_data_bundles():
-    Checksum = models.get_model('ga4ghChecksum')
-    URL = models.get_model('ga4ghURL')
-    CreateDataObjectRequest = models.get_model('ga4ghCreateDataObjectRequest')
-    DataObject = models.get_model('ga4ghCreateDataObjectRequest')
-    ListDataObjectsRequest = models.get_model('ga4ghListDataObjectsRequest')
+    Checksum = models.get_model('Checksum')
+    URL = models.get_model('URL')
+    CreateDataObjectRequest = models.get_model('CreateDataObjectRequest')
+    DataObject = models.get_model('CreateDataObjectRequest')
+    ListDataObjectsRequest = models.get_model('ListDataObjectsRequest')
 
     print("..........Create some data objects ............")
     for i in range(10):
         my_data_object = DataObject(
             name="OBJ{}".format(i),
             aliases=["OBJ{}".format(i)],
-            size=10 * i,
+            size=str(10 * i),
             checksums=[Checksum(checksum="def{}".format(i), type="md5")],
             urls=[URL(url="http://{}".format(i))])
         create_request = CreateDataObjectRequest(data_object=my_data_object)
@@ -325,13 +339,13 @@ def test_data_bundles():
 
     # CreateDataBundle
     print("..........Create a Data Bundle............")
-    Checksum = models.get_model('ga4ghChecksum')
-    URL = models.get_model('ga4ghURL')
-    CreateDataBundleRequest = models.get_model('ga4ghCreateDataBundleRequest')
-    DataBundle = models.get_model('ga4ghDataBundle')
+    Checksum = models.get_model('Checksum')
+    URL = models.get_model('URL')
+    CreateDataBundleRequest = models.get_model('CreateDataBundleRequest')
+    DataBundle = models.get_model('DataBundle')
     create_data_bundle = DataBundle(
         name="abc",
-        size=12345,
+        size="12345",
         checksums=[Checksum(checksum="def", type="md5")],
         data_object_ids=[x.id for x in list_response.data_objects])
     create_request = CreateDataBundleRequest(data_bundle=create_data_bundle)
@@ -349,10 +363,10 @@ def test_data_bundles():
 
     # UpdateDataBundle
     print("..........Update that Bundle.................")
-    UpdateDataBundleRequest = models.get_model('ga4ghUpdateDataBundleRequest')
+    UpdateDataBundleRequest = models.get_model('UpdateDataBundleRequest')
     update_data_bundle = DataBundle(
         name="abc",
-        size=12345,
+        size="12345",
         data_object_ids=[x.id for x in list_response.data_objects],
         checksums=[Checksum(checksum="def", type="md5")],
         aliases=["ghi"])
@@ -375,7 +389,7 @@ def test_data_bundles():
 
     # ListDataBundles
     print("..........List Data Bundles...............")
-    ListDataBundlesRequest = models.get_model('ga4ghListDataBundlesRequest')
+    ListDataBundlesRequest = models.get_model('ListDataBundlesRequest')
     list_request = ListDataBundlesRequest()
     list_response = client.ListDataBundles(body=list_request).result()
     print(len(list_response.data_bundles))
@@ -423,7 +437,7 @@ def test_data_bundles():
         my_data_bundle = DataBundle(
             name="BDL{}".format(i),
             aliases=["BDL{}".format(i)],
-            size=10 * i,
+            size=str(10 * i),
             data_object_ids=data_bundle.data_object_ids,
             checksums=[Checksum(checksum="def", type="md5")],)
         create_request = CreateDataBundleRequest(data_bundle=my_data_bundle)
@@ -449,7 +463,6 @@ def test_data_bundles():
     print(alias_list_response.data_bundles[0].aliases[0])
 
 
- 
 def test_no_find():
     # this should raise an expected error
     with pytest.raises(HTTPNotFound) as e:
@@ -462,17 +475,17 @@ def test_no_find():
 
 def test_duplicate_create():
     """ validate server uses client's id """
-    Checksum = models.get_model('ga4ghChecksum')
-    URL = models.get_model('ga4ghURL')
-    CreateDataObjectRequest = models.get_model('ga4ghCreateDataObjectRequest')
-    DataObject = models.get_model('ga4ghCreateDataObjectRequest')
+    Checksum = models.get_model('Checksum')
+    URL = models.get_model('URL')
+    CreateDataObjectRequest = models.get_model('CreateDataObjectRequest')
+    DataObject = models.get_model('CreateDataObjectRequest')
     checksum = str(uuid.uuid1())
     id = str(uuid.uuid1())
     # print("..........Create an object............")
     create_data_object = DataObject(
         id=id,
         name="abc",
-        size=12345,
+        size="12345",
         checksums=[Checksum(checksum=checksum, type="md5")],
         urls=[URL(url="a"), URL(url="b")])
     create_request = CreateDataObjectRequest(data_object=create_data_object)
@@ -481,11 +494,11 @@ def test_duplicate_create():
     assert data_object_id == id,  "expected server to use client's id"
 
     # print("..........Create again............")
-    with pytest.raises(HTTPConflict) as e:
+    with pytest.raises(HTTPBadRequest) as e:
         create_data_object = DataObject(
             id=id,
             name="abc",
-            size=12345,
+            size="12345",
             checksums=[Checksum(checksum=checksum, type="md5")],
             urls=[URL(url="a"), URL(url="b")])
         create_request = CreateDataObjectRequest(
