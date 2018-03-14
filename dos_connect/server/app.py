@@ -29,8 +29,6 @@ def configure_app():
         swagger_json=True)
     app.add_api('data_object_service.swagger.yaml')
     CORS(app.app)
-    for rule in app.app.url_map.iter_rules():
-        print rule.rule
     return app
 
 
