@@ -11,6 +11,7 @@ from OpenSSL import SSL
 
 from prometheus_client import generate_latest, Gauge
 
+from flask import redirect
 
 import ga4gh.dos
 # These are imported by name by connexion so we assert it here.
@@ -26,7 +27,7 @@ def configure_app():
         __name__,
         swagger_ui=True,
         swagger_json=True)
-    app.add_api('data_objects_service.swagger.json')
+    app.add_api('data_object_service.swagger.yaml')
     CORS(app.app)
     return app
 
@@ -50,6 +51,10 @@ def main(args):
             g = gauges[metric.name]
             g.set(metric.count)
         return generate_latest()
+
+    @app.route("/")
+    def to_ui():
+        return redirect("/ga4gh/dos/v1/ui", code=302)
 
     if args.key_file:
         context = (args.certificate_file, args.key_file)

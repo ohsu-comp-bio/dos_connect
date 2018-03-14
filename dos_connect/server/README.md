@@ -8,6 +8,28 @@ The dos connect server has a pluggable model for:
 This readme guides you through the setup and example use cases.
 We use s3_inventory for these examples, other apps work the same.
 
+## development setup
+
+```
+# ensure python installed
+# $ python --version
+# Python 2.7.13
+
+git clone git@github.com:ohsu-comp-bio/dos_connect.git
+cd dos_connect
+virtualenv venv
+source venv/bin/activate
+pip install -r requirements.txt
+
+# now you are setup to use the clients
+
+# if you would like to use the provided server
+cd server
+pip install -r requirements.txt
+
+```
+
+
 ## setup
 ```
 export  $(cat .env | grep -v "#" | xargs )

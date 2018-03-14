@@ -101,6 +101,8 @@ def search(properties, index='data_objects', size=DEFAULT_PAGE_SIZE,
     if include_total set, return tuple (hit, total)
     """
     hits = []
+    if index not in store:
+        store[index] = []
     for doc in store[index]:
         if 'alias' in properties and 'aliases' in doc:
             if properties.alias in doc.aliases:

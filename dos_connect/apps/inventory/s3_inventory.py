@@ -75,7 +75,7 @@ class DOSHandler(object):
                      metadata):
         try:
             self.process(endpoint_url, region, bucket_name, record, metadata)
-            save_offset({'Key': record['Key']})
+            save_offset({'Key': record['Key']}, args.bucket_name)
         except Exception as e:
             logger.exception(e)
 
@@ -103,10 +103,10 @@ if __name__ == "__main__":
     common_logging(args)
     event_handler = DOSHandler(args)
 
-    offset = get_offset()
+    offset = get_offset(args.bucket_name)
     last_key = None
     if offset:
-        last_key = offset['Key']
+        last_key = offset.get('Key', None)
     # support non aws hosts
     if args.endpoint_url:
         use_ssl = True
@@ -119,7 +119,7 @@ if __name__ == "__main__":
         )
     else:
         client = boto3.client('s3')
-    
+
     paginator = client.get_paginator('list_objects_v2')
     if last_key:
     	page_iterator = paginator.paginate(Bucket=args.bucket_name, StartAfter=last_key)
@@ -130,11 +130,13 @@ if __name__ == "__main__":
         if 'x-amz-bucket-region' in page['ResponseMetadata']['HTTPHeaders']:
             region = \
                 page['ResponseMetadata']['HTTPHeaders']['x-amz-bucket-region']
+        if 'Contents' not in page:
+            logger.error(page)
+            exit(1)
         for record in page['Contents']:
             # get the metadata associated with object
-            #head = client.head_object(Bucket=args.bucket_name,
-            #                          Key=record['Key'])
-            #metadata = head['Metadata'] if ('Metadata' in head) else None
-            metadata = None
+            head = client.head_object(Bucket=args.bucket_name,
+                                     Key=record['Key'])
+            metadata = head['Metadata'] if ('Metadata' in head) else None
             event_handler.on_any_event(args.endpoint_url, region,
                                        args.bucket_name, record, metadata)
