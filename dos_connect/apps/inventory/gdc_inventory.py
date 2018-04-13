@@ -86,7 +86,6 @@ def gdc_to_ga4gh(gdc):
     :return:
     """
     DataObject = models.get_model('DataObject')
-    CreateDataObjectRequest = models.get_model('CreateDataObjectRequest')
     URL = models.get_model('URL')
     Checksum = models.get_model('Checksum')
     return DataObject(
@@ -101,13 +100,13 @@ def gdc_to_ga4gh(gdc):
 
 
 def gdc_to_CreateDataObjectRequest(gdc):
-    CreateDataObjectRequest = models.get_model('ga4ghCreateDataObjectRequest')
+    CreateDataObjectRequest = models.get_model('CreateDataObjectRequest')
     create_request = CreateDataObjectRequest(data_object=gdc_to_ga4gh(gdc))
     return create_request
 
 
 def gdc_to_UpdateDataObjectRequest(gdc):
-    UpdateDataObjectRequest = models.get_model('ga4ghUpdateDataObjectRequest')
+    UpdateDataObjectRequest = models.get_model('UpdateDataObjectRequest')
     data_object = gdc_to_ga4gh(gdc)
     update_request = UpdateDataObjectRequest(
         data_object_id=data_object['id'],
