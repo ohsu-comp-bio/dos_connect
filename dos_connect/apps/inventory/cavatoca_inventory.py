@@ -72,9 +72,9 @@ def cavataca_to_ga4gh(file_):
     Accepts a file_tuple and returns a DataObjectRequest
     :return:
     """
-    DataObject = models.get_model('ga4ghDataObject')
-    URL = models.get_model('ga4ghURL')
-    Checksum = models.get_model('ga4ghChecksum')
+    DataObject = models.get_model('DataObject')
+    URL = models.get_model('URL')
+    Checksum = models.get_model('Checksum')
     # pprint(file_._data.data)
     # {u'created_on': u'2018-03-03T00:00:59Z',
     #  u'href': u'https://cavatica-api.sbgenomics.com/v2/files/5a99e5bb4f0c9ab63d0ae8c9',
@@ -94,8 +94,8 @@ def cavataca_to_ga4gh(file_):
         checksums=[],
         created=f.created_on,
         updated=f.modified_on,
-        file_name=f.name,
-        file_size=str(f.size),
+        name=f.name,
+        size=str(f.size),
         urls=[
             URL(
                 url=f.href,
@@ -108,7 +108,7 @@ def cavataca_to_CreateDataObjectRequest(file_):
     :param file_tuple:
     :return:
     """
-    CreateDataObjectRequest = models.get_model('ga4ghCreateDataObjectRequest')
+    CreateDataObjectRequest = models.get_model('CreateDataObjectRequest')
     create_request = CreateDataObjectRequest(
         data_object=cavataca_to_ga4gh(file_))
     return create_request

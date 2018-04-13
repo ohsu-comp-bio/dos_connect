@@ -27,6 +27,7 @@ def configure_app():
         __name__,
         swagger_ui=True,
         swagger_json=True)
+    # TODO get from schemas ga4gh.dos...? #24
     app.add_api('data_object_service.swagger.yaml')
     CORS(app.app)
     return app
@@ -36,7 +37,8 @@ def main(args):
     """ configure """
     app = configure_app()
 
-    # create gauges
+    # create gauges for Prometheus
+    # Responds with total counts
     gauges = {}
     for metric in metrics():
         g = Gauge('dos_connect_{}_count'.format(metric.name),
@@ -45,6 +47,7 @@ def main(args):
         gauges[metric.name] = g
 
     # metrics
+    # Prometheus server ping response
     @app.route('/metrics')
     def metrics_endpoint():
         for metric in metrics():

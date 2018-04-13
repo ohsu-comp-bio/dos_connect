@@ -9,7 +9,7 @@ import argparse
 import logging
 import sys
 import requests.packages.urllib3
-from dos_connect.client.dos_client import Client
+from ga4gh.dos.client import Client
 from bravado.requests_client import RequestsClient
 import logging
 import json

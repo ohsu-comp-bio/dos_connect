@@ -50,7 +50,7 @@ def to_dos(endpoint_url, region, bucket_name, record, metadata):
         if etag.startswith('%22') and etag.endswith('%22'):
             etag = etag[3:-3]
         return {
-          "file_size": record['bytes'],
+          "size": record['bytes'],
           # The time, in ISO-8601,when S3 finished processing the request,
           "created":  record['last_modified'],
           "updated":  record['last_modified'],

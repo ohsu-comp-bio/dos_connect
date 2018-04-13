@@ -130,6 +130,10 @@ sudo \
 * elastic search backend
 
 ### server
+
+* `docker run -p 9200:9200 -p 9300:9300 -e "discovery.type=single-node" docker.elastic.co/elasticsearch/elasticsearch:6.2.3`
+* Then create the index `curl -X put localhost:9200/data_objects`.
+
 ```
 # defaults to localhost:9200, set ELASTIC_URL=<url> to override
 sudo \  

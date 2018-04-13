@@ -43,7 +43,7 @@ def to_dos(record):
     }
     eventTime = datetime.strptime(record['eventTime'], "%Y-%m-%dT%H:%M:%S.%fZ")
     data_object = {
-      "file_size": obj.get('size', None),
+      "size": obj.get('size', None),
       # The time, in ISO-8601,when S3 finished processing the request,
       "created": eventTime.isoformat(),
       "updated": eventTime.isoformat(),
