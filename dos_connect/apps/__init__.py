@@ -143,8 +143,8 @@ def store(args, payload):
         models = local_client.models
         client = local_client.client
         CreateDataObjectRequest = models.get_model(
-                                    'ga4ghCreateDataObjectRequest')
-        DataObject = models.get_model('ga4ghDataObject')
+                                    'CreateDataObjectRequest')
+        DataObject = models.get_model('DataObject')
         data_object = DataObject().unmarshal(payload)
         create_request = CreateDataObjectRequest(data_object=data_object)
         data_object = create_request.data_object
