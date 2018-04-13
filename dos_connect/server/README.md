@@ -24,7 +24,7 @@ pip install -r requirements.txt
 # now you are setup to use the clients
 
 # if you would like to use the provided server
-cd server
+cd dos_connect/server
 pip install -r requirements.txt
 
 ```
@@ -43,7 +43,8 @@ export  $(cat .env | grep -v "#" | xargs )
 
 ### server
 ```
-$ python -m dos_connect.server.app
+cd ../../
+python -m dos_connect.server.app
 using authorizer dos_connect.server.noop_authorizer to change set AUTHORIZER envvar
 using backend dos_connect.server.memory_backend to change set BACKEND envvar
  * Running on http://0.0.0.0:8080/ (Press CTRL+C to quit)
