@@ -72,7 +72,7 @@ def to_dos(message_json, blob=None):
                 system_metadata[field] = val
         last_modified = blob.properties.last_modified.isoformat()
         data_object = {
-          "file_size": blob.properties.content_length,
+          "size": blob.properties.content_length,
           "created": last_modified,
           "updated": last_modified,
           "mime_type": blob.properties.content_settings.content_type,

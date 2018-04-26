@@ -72,7 +72,7 @@ Setup: .env file
 # http port
 DOS_CONNECT_WEBSERVER_PORT=<port-number>
 # configure backend
-BACKEND=dos_connect.server.elastic_backend
+BACKEND=dos_connect.server.elasticsearch_backend
 ELASTIC_URL=<url>
 # configure authorizer
 AUTHORIZER=dos_connect.server.keystone_api_key_authorizer

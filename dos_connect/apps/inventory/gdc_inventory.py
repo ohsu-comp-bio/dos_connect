@@ -65,17 +65,17 @@ def gdc_to_data_object(gdc):
     Accepts a gdc dictionary and returns a CreateDataObjectRequest
     :return:
     """
-    DataObject = models.get_model('ga4ghDataObject')
-    URL = models.get_model('ga4ghURL')
-    Checksum = models.get_model('ga4ghChecksum')
+    DataObject = models.get_model('DataObject')
+    URL = models.get_model('URL')
+    Checksum = models.get_model('Checksum')
     url = URL(url="{}/data/{}".format(GDC_URL, gdc.get('file_id')),
               system_metadata=gdc)
     data_object = DataObject(
         id=gdc.get('md5sum'),
         checksums=[Checksum(checksum=gdc.get('md5sum'), type='md5')],
-        file_name=gdc.get('file_name'),
-        file_size=str(gdc.get('file_size')),
-        aliases=[gdc['file_id']],
+        name=gdc.get('file_name'),
+        size=str(gdc.get('file_size')),
+        aliases=[gdc['file_id'], gdc.get('file_name')],
         urls=[url])
     return data_object
 
@@ -85,14 +85,13 @@ def gdc_to_ga4gh(gdc):
     Accepts a gdc dictionary and returns a CreateDataObjectRequest
     :return:
     """
-    DataObject = models.get_model('ga4ghDataObject')
-    CreateDataObjectRequest = models.get_model('ga4ghCreateDataObjectRequest')
-    URL = models.get_model('ga4ghURL')
-    Checksum = models.get_model('ga4ghChecksum')
+    DataObject = models.get_model('DataObject')
+    URL = models.get_model('URL')
+    Checksum = models.get_model('Checksum')
     return DataObject(
         checksums=[Checksum(checksum=gdc.get('md5sum'), type='md5')],
-        file_name=gdc.get('file_name'),
-        file_size=str(gdc.get('file_size')),
+        name=gdc.get('file_name'),
+        size=str(gdc.get('file_size')),
         aliases=[gdc['file_id']],
         urls=[
             URL(
@@ -101,13 +100,13 @@ def gdc_to_ga4gh(gdc):
 
 
 def gdc_to_CreateDataObjectRequest(gdc):
-    CreateDataObjectRequest = models.get_model('ga4ghCreateDataObjectRequest')
+    CreateDataObjectRequest = models.get_model('CreateDataObjectRequest')
     create_request = CreateDataObjectRequest(data_object=gdc_to_ga4gh(gdc))
     return create_request
 
 
 def gdc_to_UpdateDataObjectRequest(gdc):
-    UpdateDataObjectRequest = models.get_model('ga4ghUpdateDataObjectRequest')
+    UpdateDataObjectRequest = models.get_model('UpdateDataObjectRequest')
     data_object = gdc_to_ga4gh(gdc)
     update_request = UpdateDataObjectRequest(
         data_object_id=data_object['id'],

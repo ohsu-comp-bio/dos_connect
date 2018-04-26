@@ -51,7 +51,7 @@ def to_dos(message):
               'user_metadata': user_metadata
               }]
     return {
-      "file_size": int(record['size']),
+      "size": int(record['size']),
       "created": record['timeCreated'],
       "updated": record['updated'],
       # TODO multipart ...

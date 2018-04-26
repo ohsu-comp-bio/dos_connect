@@ -52,7 +52,7 @@ def to_dos(url, blob):
 
     last_modified = blob.properties.last_modified
     return {
-      "file_size": blob.properties.content_length,
+      "size": blob.properties.content_length,
       "created": last_modified.isoformat(),
       "updated": last_modified.isoformat(),
       # TODO check multipart md5 ?

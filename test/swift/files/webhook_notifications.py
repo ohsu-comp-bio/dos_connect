@@ -255,7 +255,7 @@ class LoggingNotifier(object):
         else:
             data_object = {
               "id": _id,
-              "file_size": swift['content-length'],
+              "size": swift['content-length'],
               "created": swift['updated_at'],
               "updated": swift['updated_at'],
               "checksums": [{'checksum': swift['etag'], 'type': 'md5'}],
